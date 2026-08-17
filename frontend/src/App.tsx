@@ -1,19 +1,32 @@
-import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { Navbar } from './components/Navbar';
+import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { DepartmentsPage } from './pages/DepartmentsPage';
+import { UsersPage } from './pages/UsersPage';
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950 text-slate-100">
-      <div className="max-w-2xl text-center space-y-4">
-        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-sky-300 to-indigo-500 bg-clip-text text-transparent">
-          ProjectVault
-        </h1>
-        <p className="text-lg text-slate-400">
-          AI-Powered Centralized Academic Project Repository & Discovery Engine
-        </p>
-        <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-sm text-slate-300">
-          Phase 2 Workspace Structure Baseline Initialized Successfully.
+    <Router>
+      <AuthProvider>
+        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+          <Navbar />
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<RegisterPage />} />
+              <Route path="/departments" element={<DepartmentsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+            </Routes>
+          </main>
+          <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+            ProjectVault &copy; {new Date().getFullYear()} Academic Repository System — Powered by Spring Boot & React
+          </footer>
         </div>
-      </div>
-    </div>
+      </AuthProvider>
+    </Router>
   );
 }

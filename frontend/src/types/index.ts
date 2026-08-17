@@ -1,0 +1,117 @@
+export type Role = 'ADMIN' | 'FACULTY' | 'STUDENT';
+export type UserStatus = 'ACTIVE' | 'ALUMNI' | 'INACTIVE';
+export type ProjectStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+export type ProjectVisibility = 'PUBLIC' | 'DEPARTMENT_ONLY' | 'PRIVATE';
+
+export interface Department {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: Role;
+  userStatus: UserStatus;
+  departmentId?: number;
+  departmentName?: string;
+  departmentCode?: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface ProjectMember {
+  id: number;
+  userId: number;
+  userFullName: string;
+  userEmail: string;
+  memberRole: string;
+}
+
+export interface ProjectSummary {
+  id: number;
+  title: string;
+  abstractText: string;
+  academicYear: string;
+  semester: number;
+  projectType: string;
+  status: ProjectStatus;
+  visibility: ProjectVisibility;
+  departmentId: number;
+  departmentName: string;
+  createdByUserId: number;
+  createdByUserName?: string;
+  createdByFullName?: string;
+  repositoryUrl?: string;
+  createdAt: string;
+}
+
+export interface ProjectDetail extends ProjectSummary {
+  members: ProjectMember[];
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
+export interface AuthResponse {
+  token?: string;
+  accessToken?: string;
+  tokenType?: string;
+  expiresInMs?: number;
+  expiresIn?: number;
+  user: User;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  departmentId?: number;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface CreateProjectRequest {
+  title: string;
+  abstractText: string;
+  academicYear: string;
+  semester: number;
+  projectType: string;
+  visibility: ProjectVisibility;
+  departmentId: number;
+  repositoryUrl?: string;
+  members?: { userId: number; memberRole: string }[];
+}
+
+export interface UpdateProjectRequest {
+  title?: string;
+  abstractText?: string;
+  academicYear?: string;
+  semester?: number;
+  projectType?: string;
+  visibility?: ProjectVisibility;
+  repositoryUrl?: string;
+}
