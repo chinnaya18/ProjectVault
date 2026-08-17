@@ -4,27 +4,33 @@ import com.projectvault.dto.request.CreateProjectRequest;
 import com.projectvault.dto.request.ProjectMemberRequest;
 import com.projectvault.dto.request.ProjectStatusTransitionRequest;
 import com.projectvault.dto.request.UpdateProjectRequest;
-import com.projectvault.dto.response.PageResponse;
-import com.projectvault.dto.response.ProjectDetailDto;
-import com.projectvault.dto.response.ProjectSummaryDto;
+import com.projectvault.dto.response.*;
 import com.projectvault.entity.*;
 import com.projectvault.exception.BadRequestException;
 import com.projectvault.exception.ForbiddenException;
 import com.projectvault.exception.ResourceNotFoundException;
 import com.projectvault.mapper.ProjectMapper;
-import com.projectvault.repository.DepartmentRepository;
-import com.projectvault.repository.ProjectMemberRepository;
-import com.projectvault.repository.ProjectRepository;
-import com.projectvault.repository.UserRepository;
+import com.projectvault.repository.*;
 import com.projectvault.security.UserPrincipal;
 import com.projectvault.service.ProjectService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectServiceImpl implements ProjectService {
@@ -33,18 +39,27 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
+    private final ProjectWorkflowHistoryRepository projectWorkflowHistoryRepository;
+    private final ProjectFileRepository projectFileRepository;
     private final ProjectMapper projectMapper;
+
+    @Value("${projectvault.storage.local-dir:d:/projectvault/storage/projects}")
+    private String localStorageDir;
 
     public ProjectServiceImpl(
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
             DepartmentRepository departmentRepository,
             UserRepository userRepository,
+            ProjectWorkflowHistoryRepository projectWorkflowHistoryRepository,
+            ProjectFileRepository projectFileRepository,
             ProjectMapper projectMapper) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
+        this.projectWorkflowHistoryRepository = projectWorkflowHistoryRepository;
+        this.projectFileRepository = projectFileRepository;
         this.projectMapper = projectMapper;
     }
 
@@ -53,9 +68,7 @@ public class ProjectServiceImpl implements ProjectService {
     public PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status, ProjectVisibility visibility, Pageable pageable, UserPrincipal currentUser) {
         Page<Project> page;
 
-        // Public Visitor / Unauthenticated or Filtered View
         if (currentUser == null) {
-            // Unauthenticated visitors can ONLY view APPROVED and PUBLIC projects
             page = projectRepository.findByStatusAndVisibility(ProjectStatus.APPROVED, ProjectVisibility.PUBLIC, pageable);
         } else if (departmentId != null) {
             page = projectRepository.findByDepartmentId(departmentId, pageable);
@@ -73,7 +86,6 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
 
-        // Public Visitor Restriction Check
         if (currentUser == null) {
             if (project.getStatus() != ProjectStatus.APPROVED || project.getVisibility() != ProjectVisibility.PUBLIC) {
                 throw new ForbiddenException("Public access is restricted to approved public projects.");
@@ -81,7 +93,23 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
-        return projectMapper.toProjectDetailDto(project, members);
+        ProjectDetailDto dto = projectMapper.toProjectDetailDto(project, members);
+
+        // Fetch DB Workflow History
+        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository.findByProjectIdOrderByCreatedAtAsc(id);
+        List<ProjectWorkflowHistoryDto> historyDtos = histories.stream()
+                .map(projectMapper::toProjectWorkflowHistoryDto)
+                .collect(Collectors.toList());
+        dto.setWorkflowHistory(historyDtos);
+
+        // Fetch DB Files
+        List<ProjectFile> files = projectFileRepository.findByProjectId(id);
+        List<ProjectFileDto> fileDtos = files.stream()
+                .map(projectMapper::toProjectFileDto)
+                .collect(Collectors.toList());
+        dto.setFiles(fileDtos);
+
+        return dto;
     }
 
     @Override
@@ -115,7 +143,10 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectMember leadMember = new ProjectMember(savedProject, creator, "Project Lead / Author");
         projectMemberRepository.save(leadMember);
 
-        // Process additional team members if provided
+        // Record initial creation in DB Workflow History
+        ProjectWorkflowHistory history = new ProjectWorkflowHistory(savedProject, null, ProjectStatus.DRAFT, creator);
+        projectWorkflowHistoryRepository.save(history);
+
         List<ProjectMember> members = new ArrayList<>();
         members.add(leadMember);
 
@@ -130,7 +161,10 @@ public class ProjectServiceImpl implements ProjectService {
             }
         }
 
-        return projectMapper.toProjectDetailDto(savedProject, members);
+        ProjectDetailDto dto = projectMapper.toProjectDetailDto(savedProject, members);
+        dto.setWorkflowHistory(List.of(projectMapper.toProjectWorkflowHistoryDto(history)));
+        dto.setFiles(List.of());
+        return dto;
     }
 
     @Override
@@ -143,7 +177,6 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
 
-        // Edit boundary rule: Student can edit ONLY when DRAFT or REJECTED
         boolean isCreator = project.getCreatedBy().getId().equals(currentUser.getId());
         boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
@@ -166,7 +199,15 @@ public class ProjectServiceImpl implements ProjectService {
         Project updated = projectRepository.save(project);
         List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
 
-        return projectMapper.toProjectDetailDto(updated, members);
+        ProjectDetailDto dto = projectMapper.toProjectDetailDto(updated, members);
+
+        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository.findByProjectIdOrderByCreatedAtAsc(id);
+        dto.setWorkflowHistory(histories.stream().map(projectMapper::toProjectWorkflowHistoryDto).collect(Collectors.toList()));
+
+        List<ProjectFile> files = projectFileRepository.findByProjectId(id);
+        dto.setFiles(files.stream().map(projectMapper::toProjectFileDto).collect(Collectors.toList()));
+
+        return dto;
     }
 
     @Override
@@ -179,17 +220,31 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
 
+        User actor = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", currentUser.getId()));
+
         ProjectStatus currentStatus = project.getStatus();
         ProjectStatus targetStatus = request.getStatus();
 
-        // Enforce Formally Permitted Lifecycle Transitions
         validateStatusTransition(currentStatus, targetStatus, currentUser, project);
 
         project.setStatus(targetStatus);
         Project updated = projectRepository.save(project);
 
+        // Record Workflow History in DB
+        ProjectWorkflowHistory history = new ProjectWorkflowHistory(updated, currentStatus, targetStatus, actor);
+        projectWorkflowHistoryRepository.save(history);
+
         List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
-        return projectMapper.toProjectDetailDto(updated, members);
+        ProjectDetailDto dto = projectMapper.toProjectDetailDto(updated, members);
+
+        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository.findByProjectIdOrderByCreatedAtAsc(id);
+        dto.setWorkflowHistory(histories.stream().map(projectMapper::toProjectWorkflowHistoryDto).collect(Collectors.toList()));
+
+        List<ProjectFile> files = projectFileRepository.findByProjectId(id);
+        dto.setFiles(files.stream().map(projectMapper::toProjectFileDto).collect(Collectors.toList()));
+
+        return dto;
     }
 
     private void validateStatusTransition(ProjectStatus current, ProjectStatus target, UserPrincipal user, Project project) {
@@ -200,14 +255,6 @@ public class ProjectServiceImpl implements ProjectService {
         if (current == target) {
             throw new BadRequestException("Project is already in status " + current);
         }
-
-        // Permitted transitions:
-        // DRAFT -> SUBMITTED (Student / Creator)
-        // SUBMITTED -> UNDER_REVIEW (Faculty / Admin)
-        // UNDER_REVIEW -> APPROVED (Faculty / Admin)
-        // UNDER_REVIEW -> REJECTED (Faculty / Admin)
-        // REJECTED -> DRAFT (Student / Creator)
-        // APPROVED -> ARCHIVED (Faculty / Admin)
 
         if (current == ProjectStatus.DRAFT && target == ProjectStatus.SUBMITTED) {
             if (!isCreator && !isAdmin) {
@@ -255,7 +302,116 @@ public class ProjectServiceImpl implements ProjectService {
             throw new BadRequestException("Non-admin users can only delete project entries in DRAFT status.");
         }
 
+        projectWorkflowHistoryRepository.deleteByProjectId(id);
+        projectFileRepository.deleteByProjectId(id);
         projectMemberRepository.deleteByProjectId(id);
         projectRepository.delete(project);
+    }
+
+    @Override
+    @Transactional
+    public ProjectFileDto uploadProjectFile(Long projectId, MultipartFile file, UserPrincipal currentUser) {
+        if (currentUser == null) {
+            throw new ForbiddenException("Authentication required.");
+        }
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+        boolean isCreator = project.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isCreator && !isAdmin) {
+            throw new ForbiddenException("Only project creator can upload documents.");
+        }
+
+        // Lock File Upload after Submission Rule: Uploads allowed ONLY in DRAFT status!
+        if (project.getStatus() != ProjectStatus.DRAFT && !isAdmin) {
+            throw new BadRequestException("Documents can only be uploaded while the project is in DRAFT status. Uploads are locked after submission.");
+        }
+
+        try {
+            Path targetDir = Paths.get(localStorageDir, projectId.toString());
+            Files.createDirectories(targetDir);
+
+            String cleanFileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path filePath = targetDir.resolve(cleanFileName);
+
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            ProjectFile projectFile = new ProjectFile(
+                    project,
+                    file.getOriginalFilename(),
+                    file.getContentType() != null ? file.getContentType() : "application/octet-stream",
+                    filePath.toString(),
+                    file.getSize()
+            );
+
+            ProjectFile savedFile = projectFileRepository.save(projectFile);
+            return projectMapper.toProjectFileDto(savedFile);
+
+        } catch (IOException e) {
+            throw new BadRequestException("Could not store file. Error: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Resource getProjectFileResource(Long projectId, Long fileId, UserPrincipal currentUser) {
+        ProjectFile projectFile = projectFileRepository.findById(fileId)
+                .orElseThrow(() -> new ResourceNotFoundException("ProjectFile", "id", fileId));
+
+        if (!projectFile.getProject().getId().equals(projectId)) {
+            throw new BadRequestException("File does not belong to specified project.");
+        }
+
+        try {
+            Path filePath = Paths.get(projectFile.getFilePath());
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() || resource.isReadable()) {
+                return resource;
+            } else {
+                throw new ResourceNotFoundException("File", "id", fileId);
+            }
+        } catch (MalformedURLException e) {
+            throw new BadRequestException("File path is invalid.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteProjectFile(Long projectId, Long fileId, UserPrincipal currentUser) {
+        if (currentUser == null) {
+            throw new ForbiddenException("Authentication required.");
+        }
+
+        ProjectFile projectFile = projectFileRepository.findById(fileId)
+                .orElseThrow(() -> new ResourceNotFoundException("ProjectFile", "id", fileId));
+
+        Project project = projectFile.getProject();
+        if (!project.getId().equals(projectId)) {
+            throw new BadRequestException("File does not belong to specified project.");
+        }
+
+        boolean isCreator = project.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isCreator && !isAdmin) {
+            throw new ForbiddenException("Not authorized to delete this file.");
+        }
+
+        if (project.getStatus() != ProjectStatus.DRAFT && !isAdmin) {
+            throw new BadRequestException("Files can only be deleted while the project is in DRAFT status.");
+        }
+
+        try {
+            Path path = Paths.get(projectFile.getFilePath());
+            Files.deleteIfExists(path);
+        } catch (IOException e) {
+            // Log file deletion issue but proceed to remove DB entry
+        }
+
+        projectFileRepository.delete(projectFile);
     }
 }

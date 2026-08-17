@@ -18,4 +18,8 @@ public interface ProjectService {
     ProjectDetailDto updateProject(Long id, UpdateProjectRequest request, UserPrincipal currentUser);
     ProjectDetailDto transitionProjectStatus(Long id, ProjectStatusTransitionRequest request, UserPrincipal currentUser);
     void deleteProject(Long id, UserPrincipal currentUser);
+
+    com.projectvault.dto.response.ProjectFileDto uploadProjectFile(Long projectId, org.springframework.web.multipart.MultipartFile file, UserPrincipal currentUser);
+    org.springframework.core.io.Resource getProjectFileResource(Long projectId, Long fileId, UserPrincipal currentUser);
+    void deleteProjectFile(Long projectId, Long fileId, UserPrincipal currentUser);
 }

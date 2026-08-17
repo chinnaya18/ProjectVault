@@ -1,6 +1,7 @@
 target/
-!.mvn/wrapper/maven-wrapper.jar
-!target/classes/META-INF/
+*.class
+*.jar
+*.war
 
 ### Eclipse ###
 .apt_generated

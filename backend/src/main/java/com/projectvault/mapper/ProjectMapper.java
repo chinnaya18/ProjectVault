@@ -92,4 +92,29 @@ public class ProjectMapper {
                 memberDtos
         );
     }
+
+    public com.projectvault.dto.response.ProjectWorkflowHistoryDto toProjectWorkflowHistoryDto(com.projectvault.entity.ProjectWorkflowHistory history) {
+        if (history == null) return null;
+        Long userId = history.getChangedBy() != null ? history.getChangedBy().getId() : null;
+        String userName = history.getChangedBy() != null ? history.getChangedBy().getFirstName() + " " + history.getChangedBy().getLastName() : "System";
+        return new com.projectvault.dto.response.ProjectWorkflowHistoryDto(
+                history.getId(),
+                history.getFromStatus(),
+                history.getToStatus(),
+                userId,
+                userName,
+                history.getCreatedAt()
+        );
+    }
+
+    public com.projectvault.dto.response.ProjectFileDto toProjectFileDto(com.projectvault.entity.ProjectFile file) {
+        if (file == null) return null;
+        return new com.projectvault.dto.response.ProjectFileDto(
+                file.getId(),
+                file.getFileName(),
+                file.getFileType(),
+                file.getFileSize(),
+                file.getUploadedAt()
+        );
+    }
 }

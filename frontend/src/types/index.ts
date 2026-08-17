@@ -34,6 +34,23 @@ export interface ProjectMember {
   memberRole: string;
 }
 
+export interface ProjectWorkflowHistory {
+  id: number;
+  fromStatus?: ProjectStatus;
+  toStatus: ProjectStatus;
+  changedByUserId: number;
+  changedByFullName: string;
+  createdAt: string;
+}
+
+export interface ProjectFile {
+  id: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+
 export interface ProjectSummary {
   id: number;
   title: string;
@@ -54,6 +71,8 @@ export interface ProjectSummary {
 
 export interface ProjectDetail extends ProjectSummary {
   members: ProjectMember[];
+  workflowHistory?: ProjectWorkflowHistory[];
+  files?: ProjectFile[];
 }
 
 export interface ApiResponse<T> {

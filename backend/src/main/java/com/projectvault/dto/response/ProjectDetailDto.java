@@ -24,6 +24,8 @@ public class ProjectDetailDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<ProjectMemberDto> members;
+    private List<ProjectWorkflowHistoryDto> workflowHistory;
+    private List<ProjectFileDto> files;
 
     public ProjectDetailDto() {}
 
@@ -172,5 +174,21 @@ public class ProjectDetailDto {
 
     public void setMembers(List<ProjectMemberDto> members) {
         this.members = members;
+    }
+
+    public List<ProjectWorkflowHistoryDto> getWorkflowHistory() {
+        return workflowHistory;
+    }
+
+    public void setWorkflowHistory(List<ProjectWorkflowHistoryDto> workflowHistory) {
+        this.workflowHistory = workflowHistory;
+    }
+
+    public List<ProjectFileDto> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<ProjectFileDto> files) {
+        this.files = files;
     }
 }

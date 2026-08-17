@@ -1,13 +1,16 @@
 # Node & Frontend dependencies & build artifacts
 node_modules/
 dist/
+dist-ssr/
 .vite/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # Java & Spring Boot Maven build output
+**/target/
 target/
 *.class
 *.jar
@@ -27,6 +30,7 @@ env/
 .idea/
 *.swp
 *.swo
+*.iml
 
 # Antigravity & Agentic Workspace temp files
 .system_generated/
