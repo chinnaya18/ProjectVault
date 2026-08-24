@@ -68,7 +68,7 @@ public class ProjectController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('STUDENT', 'FACULTY', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Create Project Draft", description = "Creates a new academic project in DRAFT status.")
     public ResponseEntity<ApiResponse<ProjectDetailDto>> createProject(

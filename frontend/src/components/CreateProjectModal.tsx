@@ -35,9 +35,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [facultyList, setFacultyList] = useState<{ id: number; name: string }[]>([]);
+
   useEffect(() => {
     if (isOpen) {
       fetchDepartments();
+      fetchFaculty();
       if (user) {
         setTeamMembers((prev) => {
           const first = { email: user.email, name: `${user.firstName} ${user.lastName}`.trim() };
@@ -50,6 +53,25 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       }
     }
   }, [isOpen, user, teamCount]);
+
+  const fetchFaculty = async () => {
+    try {
+      const res = await api.get<ApiResponse<PageResponse<any>>>('/users?size=100');
+      if (res.data && res.data.data && res.data.data.content) {
+        const faculties = res.data.data.content
+          .filter((u: any) => u.role === 'FACULTY')
+          .map((u: any) => ({
+            id: u.id,
+            name: `Prof. ${u.firstName} ${u.lastName} (${u.email})`
+          }));
+        if (faculties.length > 0) {
+          setFacultyList(faculties);
+        }
+      }
+    } catch (err) {
+      console.log('Using default faculty list:', err);
+    }
+  };
 
   const fetchDepartments = async () => {
     setIsLoadingDepartments(true);
@@ -87,7 +109,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
     const payload = {
       ...formData,
       members: teamMembers.slice(0, teamCount).map((m, idx) => ({
-        userEmail: m.email,
+        userId: user?.id || 1,
         memberRole: idx === 0 ? 'Project Lead / Author' : `Team Member #${idx + 1}`
       }))
     };
@@ -240,9 +262,19 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                 onChange={(e) => setFormData({ ...formData, guideFacultyId: Number(e.target.value) })}
               >
                 <option value="">Select Designated Faculty Guide</option>
-                <option value={2}>Prof. Geetha (Faculty Guide)</option>
-                <option value={3}>Prof. Gayathri (Faculty Guide)</option>
-                <option value={4}>Prof. Manavalan (Faculty Guide)</option>
+                {facultyList.length > 0 ? (
+                  facultyList.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value={2}>Prof. Geetha (Faculty Guide)</option>
+                    <option value={3}>Prof. Gayathri (Faculty Guide)</option>
+                    <option value={4}>Prof. Manavalan (Faculty Guide)</option>
+                  </>
+                )}
               </select>
             </div>
 

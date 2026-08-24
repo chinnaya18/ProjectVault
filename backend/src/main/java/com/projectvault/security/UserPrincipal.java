@@ -77,6 +77,14 @@ public class UserPrincipal implements UserDetails {
         return true;
     }
 
+    public String getRole() {
+        return authorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .map(auth -> auth.startsWith("ROLE_") ? auth.substring(5) : auth)
+                .findFirst()
+                .orElse("STUDENT");
+    }
+
     @Override
     public boolean isEnabled() {
         return isActive;

@@ -34,7 +34,9 @@ export const UserDashboard: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
 
   // Active Tab: 'my-projects' | 'catalog' | 'review'
-  const [activeTab, setActiveTab] = useState<'my-projects' | 'catalog' | 'review'>('my-projects');
+  const [activeTab, setActiveTab] = useState<'my-projects' | 'catalog' | 'review'>(
+    user?.role === 'FACULTY' ? 'review' : user?.role === 'ADMIN' ? 'catalog' : 'my-projects'
+  );
 
   // Filter state for catalog tab
   const [selectedDept, setSelectedDept] = useState<string>('');
@@ -56,7 +58,14 @@ export const UserDashboard: React.FC = () => {
     if (user?.role === 'ADMIN') {
       fetchSystemUsers();
     }
-  }, [page, selectedDept, selectedStatus, user]);
+    if (user?.role === 'FACULTY') {
+      setActiveTab('review');
+    } else if (user?.role === 'ADMIN') {
+      setActiveTab('catalog');
+    } else if (user?.role === 'STUDENT') {
+      setActiveTab('my-projects');
+    }
+  }, [page, selectedDept, selectedStatus, user?.id, user?.role]);
 
   const fetchSystemUsers = async () => {
     try {
@@ -107,7 +116,9 @@ export const UserDashboard: React.FC = () => {
     setIsRefreshing(false);
   };
 
-  const isStaff = user?.role === 'FACULTY' || user?.role === 'ADMIN';
+  const isStudent = user?.role === 'STUDENT';
+  const isFaculty = user?.role === 'FACULTY';
+  const isStaff = isFaculty || user?.role === 'ADMIN';
   const isAdmin = user?.role === 'ADMIN';
 
   // Filter projects created by current user
@@ -118,11 +129,25 @@ export const UserDashboard: React.FC = () => {
   const myPendingCount = myProjects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW').length;
   const myDraftCount = myProjects.filter(p => p.status === 'DRAFT').length;
 
-  // Projects pending review for faculty/admin
-  const pendingReviewProjects = allProjects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW');
+  // Projects pending review for faculty/admin (filtered by designated guide for faculty)
+  const pendingReviewProjects = allProjects.filter(p => {
+    const isPending = p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW';
+    if (!isPending) return false;
+    if (isAdmin) return true;
+    if (isFaculty) {
+      return !p.guideFacultyId || p.guideFacultyId === user?.id;
+    }
+    return false;
+  });
 
   // Filtered view for catalog
   const filteredCatalogProjects = allProjects.filter((p) => {
+    // Hide non-approved projects of other peers/students in catalog unless owned or guided by faculty
+    if (!isAdmin && p.status !== 'APPROVED') {
+      const isMine = user && p.createdByUserId === user.id;
+      const isMyGuided = isFaculty && user && p.guideFacultyId === user.id;
+      if (!isMine && !isMyGuided) return false;
+    }
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     const author = p.createdByUserName || p.createdByFullName || '';
@@ -212,7 +237,7 @@ export const UserDashboard: React.FC = () => {
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {!isAdmin && (
+            {isStudent && (
               <button
                 onClick={() => setIsCreateOpen(true)}
                 className="inline-flex items-center space-x-2 px-5 py-3 rounded-2xl bg-white text-indigo-700 font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg hover:shadow-white/20"
@@ -244,71 +269,89 @@ export const UserDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* User Usage & Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Total Submissions */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Submissions</span>
-            <div className="text-2xl font-extrabold text-slate-900">{totalSubmissionsCount}</div>
-            <span className="text-xs text-slate-500 font-medium">{isStaff ? 'System / Dept Submissions' : 'Created by you'}</span>
+      {/* User Usage & Statistics Cards - ONLY FOR STUDENTS */}
+      {isStudent && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Total Submissions */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Submissions</span>
+              <div className="text-2xl font-extrabold text-slate-900">{totalSubmissionsCount}</div>
+              <span className="text-xs text-slate-500 font-medium">Created by you</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+              <FolderOpen className="w-6 h-6" />
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-            <FolderOpen className="w-6 h-6" />
-          </div>
-        </div>
 
-        {/* Approved Submissions */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Approved Projects</span>
-            <div className="text-2xl font-extrabold text-emerald-700">{approvedCount}</div>
-            <span className="text-xs text-slate-500 font-medium">Publicly published</span>
+          {/* Approved Submissions */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Approved Projects</span>
+              <div className="text-2xl font-extrabold text-emerald-700">{approvedCount}</div>
+              <span className="text-xs text-slate-500 font-medium">Publicly published</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-        </div>
 
-        {/* Pending Review */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Under Review</span>
-            <div className="text-2xl font-extrabold text-sky-700">{pendingReviewCount}</div>
-            <span className="text-xs text-slate-500 font-medium">{isStaff ? 'Pending Faculty Review' : 'Awaiting evaluation'}</span>
+          {/* Pending Review */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Under Review</span>
+              <div className="text-2xl font-extrabold text-sky-700">{pendingReviewCount}</div>
+              <span className="text-xs text-slate-500 font-medium">Awaiting evaluation</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
+              <Clock className="w-6 h-6" />
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
-            <Clock className="w-6 h-6" />
-          </div>
-        </div>
 
-        {/* Draft Entries */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Draft Entries</span>
-            <div className="text-2xl font-extrabold text-amber-700">{draftCount}</div>
-            <span className="text-xs text-slate-500 font-medium">In preparation</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <FileEdit className="w-6 h-6" />
+          {/* Draft Entries */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Draft Entries</span>
+              <div className="text-2xl font-extrabold text-amber-700">{draftCount}</div>
+              <span className="text-xs text-slate-500 font-medium">In preparation</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <FileEdit className="w-6 h-6" />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Navigation Tabs */}
       <div className="border-b border-slate-200 flex items-center justify-between">
         <div className="flex space-x-2">
-          <button
-            onClick={() => setActiveTab('my-projects')}
-            className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
-              activeTab === 'my-projects'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <UserIcon className="w-4 h-4" />
-            <span>{isAdmin ? 'System Project Directory' : `My Projects & Usage (${myProjects.length})`}</span>
-          </button>
+          {isStudent && (
+            <button
+              onClick={() => setActiveTab('my-projects')}
+              className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
+                activeTab === 'my-projects'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <UserIcon className="w-4 h-4" />
+              <span>My Projects & Usage ({myProjects.length})</span>
+            </button>
+          )}
+
+          {isStaff && (
+            <button
+              onClick={() => setActiveTab('review')}
+              className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
+                activeTab === 'review'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Projects Under Review ({pendingReviewProjects.length})</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('catalog')}
@@ -321,25 +364,11 @@ export const UserDashboard: React.FC = () => {
             <FolderGit2 className="w-4 h-4" />
             <span>All Repository Catalog</span>
           </button>
-
-          {isStaff && (
-            <button
-              onClick={() => setActiveTab('review')}
-              className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
-                activeTab === 'review'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Pending Reviews ({pendingReviewProjects.length})</span>
-            </button>
-          )}
         </div>
       </div>
 
-      {/* TAB CONTENT 1: MY PROJECTS & PERSONAL USAGE */}
-      {activeTab === 'my-projects' && (
+      {/* TAB CONTENT 1: MY PROJECTS & PERSONAL USAGE (STUDENT ONLY) */}
+      {activeTab === 'my-projects' && isStudent && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-slate-900">

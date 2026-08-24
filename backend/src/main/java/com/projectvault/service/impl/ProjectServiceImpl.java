@@ -69,11 +69,16 @@ public class ProjectServiceImpl implements ProjectService {
         Page<Project> page;
 
         if (currentUser == null) {
-            page = projectRepository.findByStatusAndVisibility(ProjectStatus.APPROVED, ProjectVisibility.PUBLIC, pageable);
-        } else if (departmentId != null) {
-            page = projectRepository.findByDepartmentId(departmentId, pageable);
+            page = projectRepository.findVisitorProjects(departmentId, pageable);
         } else {
-            page = projectRepository.findAll(pageable);
+            String role = currentUser.getRole();
+            if ("ADMIN".equalsIgnoreCase(role)) {
+                page = projectRepository.findAdminProjects(departmentId, status, pageable);
+            } else if ("FACULTY".equalsIgnoreCase(role)) {
+                page = projectRepository.findFacultyProjects(currentUser.getId(), departmentId, status, pageable);
+            } else {
+                page = projectRepository.findStudentProjects(currentUser.getId(), departmentId, status, pageable);
+            }
         }
 
         Page<ProjectSummaryDto> dtoPage = page.map(projectMapper::toProjectSummaryDto);
@@ -86,9 +91,22 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
 
-        if (currentUser == null) {
-            if (project.getStatus() != ProjectStatus.APPROVED || project.getVisibility() != ProjectVisibility.PUBLIC) {
+        // Enforce strict data privacy and abstraction
+        if (project.getStatus() != ProjectStatus.APPROVED || project.getVisibility() != ProjectVisibility.PUBLIC) {
+            if (currentUser == null) {
                 throw new ForbiddenException("Public access is restricted to approved public projects.");
+            }
+
+            String role = currentUser.getRole();
+            if (!"ADMIN".equalsIgnoreCase(role)) {
+                boolean isCreator = project.getCreatedBy() != null && project.getCreatedBy().getId().equals(currentUser.getId());
+                boolean isGuide = project.getGuideFaculty() != null && project.getGuideFaculty().getId().equals(currentUser.getId());
+                boolean isMember = projectMemberRepository.findByProjectId(id).stream()
+                        .anyMatch(m -> m.getUser() != null && m.getUser().getId().equals(currentUser.getId()));
+
+                if (!isCreator && !isGuide && !isMember) {
+                    throw new ForbiddenException("Access denied: You do not have permission to view this non-approved project.");
+                }
             }
         }
 
@@ -281,9 +299,15 @@ public class ProjectServiceImpl implements ProjectService {
             if (!isFaculty && !isAdmin) {
                 throw new ForbiddenException("Only Faculty or Admin can move a project under review.");
             }
+            if (isFaculty && !isAdmin && project.getGuideFaculty() != null && !project.getGuideFaculty().getId().equals(user.getId())) {
+                throw new ForbiddenException("Only the designated Faculty Guide or Admin can evaluate this project submission.");
+            }
         } else if (current == ProjectStatus.UNDER_REVIEW && (target == ProjectStatus.APPROVED || target == ProjectStatus.REJECTED)) {
             if (!isFaculty && !isAdmin) {
                 throw new ForbiddenException("Only Faculty or Admin can approve or reject projects.");
+            }
+            if (isFaculty && !isAdmin && project.getGuideFaculty() != null && !project.getGuideFaculty().getId().equals(user.getId())) {
+                throw new ForbiddenException("Only the designated Faculty Guide or Admin can evaluate this project submission.");
             }
         } else if (current == ProjectStatus.REJECTED && target == ProjectStatus.DRAFT) {
             if (!isCreator && !isAdmin) {

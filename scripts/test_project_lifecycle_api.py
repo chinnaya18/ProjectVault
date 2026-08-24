@@ -40,7 +40,10 @@ def run_tests():
         print(f"  - [{p['id']}] {p['title']} ({p['academicYear']}) - Status: {p['status']}, Vis: {p['visibility']}")
 
     print("\n--- 2. Student Authentication ---")
-    student_token = login("test.student@projectvault.edu", "Password@123")
+    student_token = login("25mx101@university.edu", "Password@123")
+    if not student_token:
+        print("Failed to authenticate student 25mx101@university.edu")
+        return
     print(f"Student Token obtained: {student_token[:25]}...")
     headers_student = {"Authorization": f"Bearer {student_token}"}
 
@@ -50,17 +53,23 @@ def run_tests():
         "abstractText": "An intelligent reinforcement learning framework for quadcopter collision avoidance in dense obstacle fields.",
         "academicYear": "2025-2026",
         "semester": 4,
-        "projectType": "Capstone Project",
+        "projectType": "CAPSTONE",
         "visibility": "PUBLIC",
         "departmentId": 1,
+        "guideFacultyId": 2,
         "repositoryUrl": "https://github.com/example/drone-q-learning"
     }
     status, create_res = make_request(f"{BASE_URL}/projects", method="POST", data=create_project_payload, headers=headers_student)
-    print(f"Create Project Status [{status}]: {create_res['message']}")
-    project_id = create_res["data"]["id"]
-    print(f"  Created Project ID: #{project_id} | Initial Status: {create_res['data']['status']}")
+    print(f"Create Project Status [{status}]: {create_res.get('message')}")
+    project_id = create_res.get("data", {}).get("id")
 
-    print("\n--- 4. Enforced Lifecycle State Machine Tests ---")
+    print("\n--- 4. Faculty Authentication & Review ---")
+    faculty_token = login("geetha@university.edu", "Password@123")
+    if not faculty_token:
+        print("Failed to authenticate faculty geetha@university.edu")
+        return
+    print(f"Faculty Token obtained: {faculty_token[:25]}...")
+    headers_faculty = {"Authorization": f"Bearer {faculty_token}"}
     
     # Test 4a: Student submits draft project (DRAFT -> SUBMITTED)
     print("  4a. Transitioning DRAFT -> SUBMITTED (Student)")
@@ -75,15 +84,12 @@ def run_tests():
     print(f"  Illegal Transition Result [{status}]: {err_res.get('message') or err_res.get('error')}")
 
     print("\n--- 5. Faculty Review Workflow ---")
-    # Register/promote Faculty user or login
-    faculty_token = login("admin.vault@projectvault.edu", "Password@123") # Admin has faculty/admin rights
-    headers_faculty = {"Authorization": f"Bearer {faculty_token}"}
 
-    # Test 5a: Faculty/Admin moves SUBMITTED -> UNDER_REVIEW
+    # Test 5a: Faculty moves SUBMITTED -> UNDER_REVIEW
     print("  5a. Moves SUBMITTED -> UNDER_REVIEW")
     trans_review = {"status": "UNDER_REVIEW", "feedback": "Evaluation started."}
     status, review_res = make_request(f"{BASE_URL}/projects/{project_id}/status", method="PATCH", data=trans_review, headers=headers_faculty)
-    print(f"  Status [{status}]: Project is now -> {review_res['data']['status']}")
+    print(f"  Status [{status}]: Project is now -> {review_res.get('data', {}).get('status')}")
 
     # Test 5b: Faculty/Admin approves project UNDER_REVIEW -> APPROVED
     print("\n  5b. Approves project UNDER_REVIEW -> APPROVED")
