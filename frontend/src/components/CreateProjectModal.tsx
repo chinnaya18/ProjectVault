@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Department, CreateProjectRequest, ProjectVisibility, ApiResponse, PageResponse } from '../types';
+import { Department, CreateProjectRequest, ApiResponse, PageResponse } from '../types';
 import api, { getErrorMessage } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 
 interface CreateProjectModalProps {
@@ -10,6 +11,7 @@ interface CreateProjectModalProps {
 }
 
 export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { user } = useAuth();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
 
@@ -22,7 +24,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
     visibility: 'PUBLIC',
     departmentId: 0,
     repositoryUrl: '',
+    guideFacultyId: 2, // Default to Geetha
   });
+
+  const [teamCount, setTeamCount] = useState<number>(1);
+  const [teamMembers, setTeamMembers] = useState<{ email: string; name: string }[]>([
+    { email: user?.email || '', name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() }
+  ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +38,18 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   useEffect(() => {
     if (isOpen) {
       fetchDepartments();
+      if (user) {
+        setTeamMembers((prev) => {
+          const first = { email: user.email, name: `${user.firstName} ${user.lastName}`.trim() };
+          const result = [first];
+          for (let i = 1; i < teamCount; i++) {
+            result.push(prev[i] || { email: '', name: '' });
+          }
+          return result;
+        });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, user, teamCount]);
 
   const fetchDepartments = async () => {
     setIsLoadingDepartments(true);
@@ -58,12 +76,24 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       setError('Please select an academic department');
       return;
     }
+    if (!formData.guideFacultyId) {
+      setError('Please select a designated Faculty Guide for the project');
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
 
+    const payload = {
+      ...formData,
+      members: teamMembers.slice(0, teamCount).map((m, idx) => ({
+        userEmail: m.email,
+        memberRole: idx === 0 ? 'Project Lead / Author' : `Team Member #${idx + 1}`
+      }))
+    };
+
     try {
-      await api.post('/projects', formData);
+      await api.post('/projects', payload);
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -201,22 +231,24 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Visibility Scope *
+                Faculty Guide *
               </label>
               <select
+                required
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900 bg-white"
-                value={formData.visibility}
-                onChange={(e) => setFormData({ ...formData, visibility: e.target.value as ProjectVisibility })}
+                value={formData.guideFacultyId || ''}
+                onChange={(e) => setFormData({ ...formData, guideFacultyId: Number(e.target.value) })}
               >
-                <option value="PUBLIC">Public (Campus Wide)</option>
-                <option value="DEPARTMENT_ONLY">Department Only</option>
-                <option value="PRIVATE">Private Draft</option>
+                <option value="">Select Designated Faculty Guide</option>
+                <option value={2}>Prof. Geetha (Faculty Guide)</option>
+                <option value={3}>Prof. Gayathri (Faculty Guide)</option>
+                <option value={4}>Prof. Manavalan (Faculty Guide)</option>
               </select>
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Repository Link (GitHub / GitLab)
+                Repository Link (GitHub / GitLab / Bitbucket)
               </label>
               <input
                 type="url"
@@ -225,6 +257,69 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                 value={formData.repositoryUrl || ''}
                 onChange={(e) => setFormData({ ...formData, repositoryUrl: e.target.value })}
               />
+              <p className="text-xs text-slate-500 mt-1">
+                Note: At least one document attachment or repository link is mandatory before submitting your project for faculty review.
+              </p>
+            </div>
+          </div>
+
+          {/* Team Members Section */}
+          <div className="pt-4 border-t border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Project Team Size & Members
+              </label>
+              <select
+                className="px-3 py-1 rounded-lg border border-slate-300 text-xs font-semibold bg-white"
+                value={teamCount}
+                onChange={(e) => setTeamCount(Number(e.target.value))}
+              >
+                <option value={1}>1 Member (Individual Project)</option>
+                <option value={2}>2 Members Team</option>
+                <option value={3}>3 Members Team</option>
+                <option value={4}>4 Members Team</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              {Array.from({ length: teamCount }).map((_, index) => (
+                <div key={index} className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                      Member #{index + 1} Official College Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder={`25mx10${index + 1}@university.edu`}
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white"
+                      value={teamMembers[index]?.email || ''}
+                      onChange={(e) => {
+                        const updated = [...teamMembers];
+                        updated[index] = { ...updated[index], email: e.target.value };
+                        setTeamMembers(updated);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                      Member #{index + 1} Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={index === 0 ? 'Your Full Name' : `Team Member ${index + 1} Name`}
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white"
+                      value={teamMembers[index]?.name || ''}
+                      onChange={(e) => {
+                        const updated = [...teamMembers];
+                        updated[index] = { ...updated[index], name: e.target.value };
+                        setTeamMembers(updated);
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

@@ -1,10 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { DepartmentsPage } from './pages/DepartmentsPage';
 import { UsersPage } from './pages/UsersPage';
 
 export default function App() {
@@ -18,7 +17,7 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<RegisterPage />} />
-              <Route path="/departments" element={<DepartmentsPage />} />
+              <Route path="/departments" element={<Navigate to="/" replace />} />
               <Route path="/users" element={<UsersPage />} />
             </Routes>
           </main>

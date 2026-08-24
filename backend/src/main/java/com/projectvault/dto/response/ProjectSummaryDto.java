@@ -9,6 +9,7 @@ public class ProjectSummaryDto {
 
     private Long id;
     private String title;
+    private String abstractText;
     private String academicYear;
     private Integer semester;
     private String projectType;
@@ -18,13 +19,16 @@ public class ProjectSummaryDto {
     private String departmentName;
     private Long createdByUserId;
     private String createdByUserName;
+    private Long guideFacultyId;
+    private String guideFacultyName;
     private LocalDateTime createdAt;
 
     public ProjectSummaryDto() {}
 
-    public ProjectSummaryDto(Long id, String title, String academicYear, Integer semester, String projectType, ProjectStatus status, ProjectVisibility visibility, Long departmentId, String departmentName, Long createdByUserId, String createdByUserName, LocalDateTime createdAt) {
+    public ProjectSummaryDto(Long id, String title, String abstractText, String academicYear, Integer semester, String projectType, ProjectStatus status, ProjectVisibility visibility, Long departmentId, String departmentName, Long createdByUserId, String createdByUserName, LocalDateTime createdAt) {
         this.id = id;
         this.title = title;
+        this.abstractText = abstractText;
         this.academicYear = academicYear;
         this.semester = semester;
         this.projectType = projectType;
@@ -51,6 +55,14 @@ public class ProjectSummaryDto {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getAbstractText() {
+        return abstractText;
+    }
+
+    public void setAbstractText(String abstractText) {
+        this.abstractText = abstractText;
     }
 
     public String getAcademicYear() {
@@ -123,6 +135,22 @@ public class ProjectSummaryDto {
 
     public void setCreatedByUserName(String createdByUserName) {
         this.createdByUserName = createdByUserName;
+    }
+
+    public Long getGuideFacultyId() {
+        return guideFacultyId;
+    }
+
+    public void setGuideFacultyId(Long guideFacultyId) {
+        this.guideFacultyId = guideFacultyId;
+    }
+
+    public String getGuideFacultyName() {
+        return guideFacultyName;
+    }
+
+    public void setGuideFacultyName(String guideFacultyName) {
+        this.guideFacultyName = guideFacultyName;
     }
 
     public LocalDateTime getCreatedAt() {

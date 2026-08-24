@@ -24,10 +24,14 @@ public class ProjectMapper {
         Long createdById = project.getCreatedBy() != null ? project.getCreatedBy().getId() : null;
         String createdByName = project.getCreatedBy() != null ?
                 project.getCreatedBy().getFirstName() + " " + project.getCreatedBy().getLastName() : null;
+        Long guideId = project.getGuideFaculty() != null ? project.getGuideFaculty().getId() : null;
+        String guideName = project.getGuideFaculty() != null ?
+                project.getGuideFaculty().getFirstName() + " " + project.getGuideFaculty().getLastName() : null;
 
-        return new ProjectSummaryDto(
+        ProjectSummaryDto dto = new ProjectSummaryDto(
                 project.getId(),
                 project.getTitle(),
+                project.getAbstractText(),
                 project.getAcademicYear(),
                 project.getSemester(),
                 project.getProjectType(),
@@ -39,6 +43,9 @@ public class ProjectMapper {
                 createdByName,
                 project.getCreatedAt()
         );
+        dto.setGuideFacultyId(guideId);
+        dto.setGuideFacultyName(guideName);
+        return dto;
     }
 
     public ProjectMemberDto toProjectMemberDto(ProjectMember member) {
@@ -69,11 +76,14 @@ public class ProjectMapper {
         Long createdById = project.getCreatedBy() != null ? project.getCreatedBy().getId() : null;
         String createdByName = project.getCreatedBy() != null ?
                 project.getCreatedBy().getFirstName() + " " + project.getCreatedBy().getLastName() : null;
+        Long guideId = project.getGuideFaculty() != null ? project.getGuideFaculty().getId() : null;
+        String guideName = project.getGuideFaculty() != null ?
+                project.getGuideFaculty().getFirstName() + " " + project.getGuideFaculty().getLastName() : null;
 
         List<ProjectMemberDto> memberDtos = members != null ?
                 members.stream().map(this::toProjectMemberDto).collect(Collectors.toList()) : List.of();
 
-        return new ProjectDetailDto(
+        ProjectDetailDto dto = new ProjectDetailDto(
                 project.getId(),
                 project.getTitle(),
                 project.getAbstractText(),
@@ -91,6 +101,9 @@ public class ProjectMapper {
                 project.getUpdatedAt(),
                 memberDtos
         );
+        dto.setGuideFacultyId(guideId);
+        dto.setGuideFacultyName(guideName);
+        return dto;
     }
 
     public com.projectvault.dto.response.ProjectWorkflowHistoryDto toProjectWorkflowHistoryDto(com.projectvault.entity.ProjectWorkflowHistory history) {

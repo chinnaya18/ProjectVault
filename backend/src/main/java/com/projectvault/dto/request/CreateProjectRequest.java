@@ -34,12 +34,14 @@ public class CreateProjectRequest {
 
     private String repositoryUrl;
 
+    private Long guideFacultyId;
+
     @Valid
     private List<ProjectMemberRequest> members;
 
     public CreateProjectRequest() {}
 
-    public CreateProjectRequest(String title, String abstractText, String academicYear, Integer semester, String projectType, ProjectVisibility visibility, Long departmentId, String repositoryUrl, List<ProjectMemberRequest> members) {
+    public CreateProjectRequest(String title, String abstractText, String academicYear, Integer semester, String projectType, ProjectVisibility visibility, Long departmentId, String repositoryUrl, Long guideFacultyId, List<ProjectMemberRequest> members) {
         this.title = title;
         this.abstractText = abstractText;
         this.academicYear = academicYear;
@@ -48,6 +50,7 @@ public class CreateProjectRequest {
         this.visibility = visibility;
         this.departmentId = departmentId;
         this.repositoryUrl = repositoryUrl;
+        this.guideFacultyId = guideFacultyId;
         this.members = members;
     }
 
@@ -113,6 +116,14 @@ public class CreateProjectRequest {
 
     public void setRepositoryUrl(String repositoryUrl) {
         this.repositoryUrl = repositoryUrl;
+    }
+
+    public Long getGuideFacultyId() {
+        return guideFacultyId;
+    }
+
+    public void setGuideFacultyId(Long guideFacultyId) {
+        this.guideFacultyId = guideFacultyId;
     }
 
     public List<ProjectMemberRequest> getMembers() {

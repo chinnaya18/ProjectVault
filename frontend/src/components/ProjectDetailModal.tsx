@@ -89,6 +89,16 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
 
   const handleStatusTransition = async (targetStatus: ProjectStatus) => {
     if (!projectId) return;
+
+    if (targetStatus === 'SUBMITTED') {
+      const hasFiles = project?.files && project.files.length > 0;
+      const hasRepoUrl = project?.repositoryUrl && project.repositoryUrl.trim().length > 0;
+      if (!hasFiles && !hasRepoUrl) {
+        setError('Cannot submit draft for review: At least one project document attachment or repository URL is mandatory before submitting.');
+        return;
+      }
+    }
+
     setIsTransitioning(true);
     setError(null);
     setSuccessMsg(null);
@@ -406,10 +416,14 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                   </div>
 
                   {/* Meta details & repo */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                       <span className="text-xs font-semibold text-slate-400 block mb-1">Created By</span>
-                      <span className="font-semibold text-slate-800">{project.createdByFullName}</span>
+                      <span className="font-semibold text-slate-800">{project.createdByUserName || project.createdByFullName || 'Contributor'}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/50">
+                      <span className="text-xs font-bold text-indigo-600 block mb-1">Designated Faculty Guide</span>
+                      <span className="font-bold text-indigo-900">{project.guideFacultyName || 'Prof. Geetha (Faculty Guide)'}</span>
                     </div>
                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                       <span className="text-xs font-semibold text-slate-400 block mb-1">Repository</span>
@@ -524,10 +538,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                           >
                             <div className="flex items-center space-x-3">
                               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xs">
-                                {member.userFullName.charAt(0)}
+                                {(member.userFullName || 'U').charAt(0)}
                               </div>
                               <div>
-                                <div className="text-sm font-semibold text-slate-900">{member.userFullName}</div>
+                                <div className="text-sm font-semibold text-slate-900">{member.userFullName || member.userEmail || 'Team Member'}</div>
                                 <div className="text-xs text-slate-500">{member.userEmail}</div>
                               </div>
                             </div>
@@ -558,15 +572,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                               <div className="font-bold text-slate-800 flex items-center space-x-1.5">
                                 <span>{history.fromStatus ? history.fromStatus.replace('_', ' ') : 'CREATION'}</span>
                                 <span className="text-slate-400">➔</span>
-                                <span className="text-indigo-600">{history.toStatus.replace('_', ' ')}</span>
+                                <span className="text-indigo-600">{(history.toStatus || '').replace('_', ' ')}</span>
                               </div>
                               <div className="text-slate-400 flex items-center space-x-1">
                                 <Clock className="w-3 h-3 text-slate-400" />
-                                <span>{new Date(history.createdAt).toLocaleString()}</span>
+                                <span>{history.createdAt ? new Date(history.createdAt).toLocaleString() : ''}</span>
                               </div>
                             </div>
                             <div className="text-xs text-slate-500 font-medium">
-                              Transitioned by: <span className="text-slate-700 font-semibold">{history.changedByFullName}</span>
+                              Transitioned by: <span className="text-slate-700 font-semibold">{history.changedByFullName || 'System'}</span>
                             </div>
                           </div>
                         ))}

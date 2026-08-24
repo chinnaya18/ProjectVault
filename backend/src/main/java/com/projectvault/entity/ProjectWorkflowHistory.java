@@ -16,7 +16,7 @@ public class ProjectWorkflowHistory {
     private Project project;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "from_status", nullable = false, length = 20)
+    @Column(name = "from_status", nullable = true, length = 20)
     private ProjectStatus fromStatus;
 
     @Enumerated(EnumType.STRING)

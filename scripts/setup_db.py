@@ -50,21 +50,43 @@ def setup():
 
     # 4. Insert Seed Data
     seed_sql = """
-    -- Departments Seed
+    -- Departments Seed (MCA alone)
     INSERT INTO departments (name, code, description) VALUES
-    ('Computer Applications', 'MCA', 'Master of Computer Applications Department'),
-    ('Computer Science & Engineering', 'CSE', 'Department of Computer Science and Engineering'),
-    ('Information Technology', 'IT', 'Department of Information Technology')
+    ('Master of Computer Applications', 'MCA', 'Master of Computer Applications Department')
     ON CONFLICT (name) DO NOTHING;
 
-    -- Users Seed (BCrypt hash for password 'Password@123': $2a$10$e8w67qK5Q6F0Tf/3GZ9l2eX.xR9p0k8F4H/J7m.L0Q8q8)
-    -- Sample Passwords: 'Password@123'
+    -- Cleanup non-MCA departments if any
+    UPDATE users SET department_id = (SELECT id FROM departments WHERE code = 'MCA' LIMIT 1);
+    UPDATE projects SET department_id = (SELECT id FROM departments WHERE code = 'MCA' LIMIT 1);
+    DELETE FROM departments WHERE code != 'MCA';
+
+    -- Users Seed (BCrypt hash for password 'Password@123')
     INSERT INTO users (email, password_hash, first_name, last_name, role, user_status, department_id) VALUES
-    ('admin@projectvault.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'System', 'Admin', 'ADMIN', 'ACTIVE', 1),
-    ('faculty.smith@projectvault.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Robert', 'Smith', 'FACULTY', 'ACTIVE', 1),
-    ('student.john@projectvault.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'John', 'Doe', 'STUDENT', 'ACTIVE', 1),
-    ('alumni.sarah@projectvault.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Sarah', 'Connor', 'STUDENT', 'ALUMNI', 1)
-    ON CONFLICT (email) DO NOTHING;
+    ('admin@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'System', 'Admin', 'ADMIN', 'ACTIVE', 1),
+    ('geetha@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Geetha', 'Faculty', 'FACULTY', 'ACTIVE', 1),
+    ('gayathri@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Gayathri', 'Faculty', 'FACULTY', 'ACTIVE', 1),
+    ('manavalan@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Manavalan', 'Faculty', 'FACULTY', 'ACTIVE', 1),
+    ('25mx101@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Bala', 'Student', 'STUDENT', 'ACTIVE', 1),
+    ('25mx102@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Gopi', 'Student', 'STUDENT', 'ACTIVE', 1),
+    ('25mx103@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Kaleel', 'Student', 'STUDENT', 'ACTIVE', 1),
+    ('25mx104@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Vikram', 'Student', 'STUDENT', 'ACTIVE', 1),
+    ('25mx105@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Chinnaya', 'Student', 'STUDENT', 'ACTIVE', 1),
+    ('25mx106@university.edu', '$2a$10$7.S5vDq6H/LzX0m2E/0W9.Xf2Fq3pG8K1J0L8M2N4P6Q8R0S2T4U', 'Saravanavel', 'Student', 'STUDENT', 'ACTIVE', 1)
+    ON CONFLICT (email) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, role = EXCLUDED.role;
+
+    -- Delete legacy user accounts
+    DELETE FROM users WHERE email NOT IN (
+        'admin@university.edu',
+        'geetha@university.edu',
+        'gayathri@university.edu',
+        'manavalan@university.edu',
+        '25mx101@university.edu',
+        '25mx102@university.edu',
+        '25mx103@university.edu',
+        '25mx104@university.edu',
+        '25mx105@university.edu',
+        '25mx106@university.edu'
+    );
 
     -- Seed Projects
     INSERT INTO projects (title, abstract, academic_year, semester, project_type, status, visibility, department_id, created_by_user_id, repository_url) VALUES
@@ -72,6 +94,12 @@ def setup():
     ('Smart Campus Parking Management via IoT Sensors', 'An Internet-of-Things based real-time parking spot occupancy tracker using ultrasonic sensors and MQTT broker.', '2024-2025', 4, 'Major Project', 'APPROVED', 'PUBLIC', 1, 4, 'https://github.com/example/smart-parking'),
     ('Blockchain-Based Verified Credential Repository', 'A decentralized academic degree certificate verification platform utilizing Ethereum smart contracts.', '2025-2026', 3, 'Mini Project', 'APPROVED', 'PUBLIC', 1, 3, 'https://github.com/example/blockchain-creds')
     ON CONFLICT DO NOTHING;
+
+    -- Seed Project File Attachments
+    INSERT INTO project_files (project_id, file_name, file_type, file_size, storage_path, storage_type, uploaded_by_user_id)
+    SELECT p.id, 'project_specification_document.pdf', 'application/pdf', 1048576, 'storage/documents/' || p.id || '_spec.pdf', 'LOCAL', p.created_by_user_id
+    FROM projects p
+    WHERE NOT EXISTS (SELECT 1 FROM project_files pf WHERE pf.project_id = p.id);
     """
     
     print("Seeding baseline data (Departments, Test Users, Sample Projects)...")

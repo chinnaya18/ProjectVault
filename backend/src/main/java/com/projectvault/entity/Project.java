@@ -42,6 +42,10 @@ public class Project {
     @JoinColumn(name = "created_by_user_id", nullable = false)
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guide_faculty_id")
+    private User guideFaculty;
+
     @Column(name = "repository_url", length = 255)
     private String repositoryUrl;
 
@@ -163,6 +167,14 @@ public class Project {
 
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public User getGuideFaculty() {
+        return guideFaculty;
+    }
+
+    public void setGuideFaculty(User guideFaculty) {
+        this.guideFaculty = guideFaculty;
     }
 
     public String getRepositoryUrl() {

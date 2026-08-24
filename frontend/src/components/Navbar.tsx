@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, FolderGit2, Building2, Users, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { BookOpen, FolderGit2, Users, LogOut, LogIn, UserPlus } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -10,7 +10,7 @@ export const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -48,19 +48,7 @@ export const Navbar: React.FC = () => {
               <span>Projects</span>
             </Link>
 
-            <Link
-              to="/departments"
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive('/departments')
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>Departments</span>
-            </Link>
-
-            {user && (user.role === 'ADMIN' || user.role === 'FACULTY') && (
+            {user && user.role === 'ADMIN' && (
               <Link
                 to="/users"
                 className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${

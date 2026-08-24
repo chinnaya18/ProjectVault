@@ -137,6 +137,11 @@ public class ProjectServiceImpl implements ProjectService {
                 request.getRepositoryUrl()
         );
 
+        if (request.getGuideFacultyId() != null) {
+            User guide = userRepository.findById(request.getGuideFacultyId()).orElse(null);
+            project.setGuideFaculty(guide);
+        }
+
         Project savedProject = projectRepository.save(project);
 
         // Add creator as Lead Developer member automatically
@@ -144,7 +149,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectMemberRepository.save(leadMember);
 
         // Record initial creation in DB Workflow History
-        ProjectWorkflowHistory history = new ProjectWorkflowHistory(savedProject, null, ProjectStatus.DRAFT, creator);
+        ProjectWorkflowHistory history = new ProjectWorkflowHistory(savedProject, ProjectStatus.DRAFT, ProjectStatus.DRAFT, creator);
         projectWorkflowHistoryRepository.save(history);
 
         List<ProjectMember> members = new ArrayList<>();
@@ -259,6 +264,18 @@ public class ProjectServiceImpl implements ProjectService {
         if (current == ProjectStatus.DRAFT && target == ProjectStatus.SUBMITTED) {
             if (!isCreator && !isAdmin) {
                 throw new ForbiddenException("Only the project author can submit a draft project.");
+            }
+            // Mandatory Document / Repository URL check before draft submission
+            boolean hasFiles = !projectFileRepository.findByProjectId(project.getId()).isEmpty();
+            boolean hasRepoUrl = project.getRepositoryUrl() != null && !project.getRepositoryUrl().trim().isEmpty();
+            if (!hasFiles && !hasRepoUrl) {
+                throw new BadRequestException("Cannot submit draft for review: At least one project document attachment or repository URL is mandatory before submission.");
+            }
+            if (project.getTitle() == null || project.getTitle().trim().isEmpty()) {
+                throw new BadRequestException("Cannot submit draft for review: Project Title is required.");
+            }
+            if (project.getAbstractText() == null || project.getAbstractText().trim().isEmpty()) {
+                throw new BadRequestException("Cannot submit draft for review: Abstract summary is required.");
             }
         } else if (current == ProjectStatus.SUBMITTED && target == ProjectStatus.UNDER_REVIEW) {
             if (!isFaculty && !isAdmin) {

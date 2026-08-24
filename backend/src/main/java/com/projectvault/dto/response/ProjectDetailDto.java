@@ -20,6 +20,8 @@ public class ProjectDetailDto {
     private String departmentName;
     private Long createdByUserId;
     private String createdByUserName;
+    private Long guideFacultyId;
+    private String guideFacultyName;
     private String repositoryUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -142,6 +144,22 @@ public class ProjectDetailDto {
 
     public void setCreatedByUserName(String createdByUserName) {
         this.createdByUserName = createdByUserName;
+    }
+
+    public Long getGuideFacultyId() {
+        return guideFacultyId;
+    }
+
+    public void setGuideFacultyId(Long guideFacultyId) {
+        this.guideFacultyId = guideFacultyId;
+    }
+
+    public String getGuideFacultyName() {
+        return guideFacultyName;
+    }
+
+    public void setGuideFacultyName(String guideFacultyName) {
+        this.guideFacultyName = guideFacultyName;
     }
 
     public String getRepositoryUrl() {

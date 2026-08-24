@@ -133,11 +133,11 @@ export const PublicLandingPage: React.FC = () => {
           {/* Quick Metrics Bar */}
           <div className="mt-12 pt-8 border-t border-indigo-700/50 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div className="space-y-1">
-              <div className="text-2xl sm:text-3xl font-extrabold text-white">{totalElements || '100+'}</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-white">{totalElements}</div>
               <div className="text-xs text-indigo-200 uppercase tracking-wider font-semibold">Published Projects</div>
             </div>
             <div className="space-y-1">
-              <div className="text-2xl sm:text-3xl font-extrabold text-white">{departments.length || '12'}</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-white">{departments.length > 0 ? departments.length : '1'}</div>
               <div className="text-xs text-indigo-200 uppercase tracking-wider font-semibold">Academic Departments</div>
             </div>
             <div className="space-y-1">

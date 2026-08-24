@@ -17,8 +17,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('pv_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('pv_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [token, setToken] = useState<string | null>(() => {
@@ -28,23 +32,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
     const initAuth = async () => {
       if (token) {
         try {
           const res = await api.get<ApiResponse<User>>('/auth/me');
-          if (res.data && res.data.data) {
+          if (isMounted && res.data && res.data.data) {
             setUser(res.data.data);
             localStorage.setItem('pv_user', JSON.stringify(res.data.data));
           }
-        } catch (err) {
-          console.error('Failed to fetch user profile:', err);
-          logout();
+        } catch (err: any) {
+          console.error('Failed to fetch user profile on init:', err);
+          if (err.response?.status === 401 && isMounted) {
+            setToken(null);
+            setUser(null);
+            localStorage.removeItem('pv_token');
+            localStorage.removeItem('pv_user');
+          }
         }
       }
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     };
     initAuth();
-  }, [token]);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleAuthSuccess = (authData: AuthResponse) => {
     const jwtToken = authData.accessToken || authData.token || '';

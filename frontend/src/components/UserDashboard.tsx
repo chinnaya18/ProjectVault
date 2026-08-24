@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ProjectSummary, Department, ProjectStatus, ApiResponse, PageResponse } from '../types';
 import api from '../api/client';
@@ -21,7 +22,8 @@ import {
   RefreshCw,
   Send,
   Eye,
-  FolderOpen
+  FolderOpen,
+  Users
 } from 'lucide-react';
 
 export const UserDashboard: React.FC = () => {
@@ -46,11 +48,26 @@ export const UserDashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDepartments();
     fetchProjects();
-  }, [page, selectedDept, selectedStatus]);
+    if (user?.role === 'ADMIN') {
+      fetchSystemUsers();
+    }
+  }, [page, selectedDept, selectedStatus, user]);
+
+  const fetchSystemUsers = async () => {
+    try {
+      const res = await api.get<ApiResponse<PageResponse<any>>>('/users?size=100');
+      if (res.data && res.data.data && res.data.data.content) {
+        setSystemUsers(res.data.data.content);
+      }
+    } catch (err) {
+      console.error('Failed to fetch system users:', err);
+    }
+  };
 
   const fetchDepartments = async () => {
     try {
@@ -90,6 +107,9 @@ export const UserDashboard: React.FC = () => {
     setIsRefreshing(false);
   };
 
+  const isStaff = user?.role === 'FACULTY' || user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'ADMIN';
+
   // Filter projects created by current user
   const myProjects = allProjects.filter(p => user && p.createdByUserId === user.id);
 
@@ -108,7 +128,7 @@ export const UserDashboard: React.FC = () => {
     const author = p.createdByUserName || p.createdByFullName || '';
     return (
       p.title.toLowerCase().includes(term) ||
-      p.abstractText.toLowerCase().includes(term) ||
+      (p.abstractText || '').toLowerCase().includes(term) ||
       author.toLowerCase().includes(term)
     );
   });
@@ -129,17 +149,26 @@ export const UserDashboard: React.FC = () => {
     );
   };
 
-  const handleQuickSubmitDraft = async (e: React.MouseEvent, projectId: number) => {
+  const handleQuickSubmitDraft = async (e: React.MouseEvent, proj: ProjectSummary) => {
     e.stopPropagation();
+    if (!proj.repositoryUrl) {
+      setSelectedProjectId(proj.id);
+      return;
+    }
     try {
-      await api.patch(`/projects/${projectId}/status`, { status: 'SUBMITTED' });
+      await api.patch(`/projects/${proj.id}/status`, { status: 'SUBMITTED' });
       fetchProjects();
     } catch (err) {
       console.error('Failed to submit draft:', err);
+      setSelectedProjectId(proj.id);
     }
   };
 
-  const isStaff = user?.role === 'FACULTY' || user?.role === 'ADMIN';
+  // Role-aware Stats calculation for top cards
+  const totalSubmissionsCount = isStaff ? (totalElements || allProjects.length) : myProjects.length;
+  const approvedCount = isStaff ? allProjects.filter(p => p.status === 'APPROVED').length : myApprovedCount;
+  const pendingReviewCount = isStaff ? allProjects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW').length : myPendingCount;
+  const draftCount = isStaff ? allProjects.filter(p => p.status === 'DRAFT').length : myDraftCount;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -171,19 +200,37 @@ export const UserDashboard: React.FC = () => {
             </h1>
 
             <p className="text-indigo-100 text-sm sm:text-base leading-relaxed">
-              {user?.departmentName ? `Affiliation: ${user.departmentName}` : 'Manage your research submissions, project drafts, and department repositories.'}
+              {isAdmin
+                ? 'System Administrator Control Center. Manage students, staff, department data, and oversee all project submissions.'
+                : user?.role === 'FACULTY'
+                ? `Faculty Evaluator Hub. Review student capstones, evaluate submissions, and guide department research.`
+                : user?.departmentName
+                ? `Affiliation: ${user.departmentName}`
+                : 'Manage your research submissions, project drafts, and department repositories.'}
             </p>
           </div>
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center space-x-2 px-5 py-3 rounded-2xl bg-white text-indigo-700 font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg hover:shadow-white/20"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Submit New Project</span>
-            </button>
+            {!isAdmin && (
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="inline-flex items-center space-x-2 px-5 py-3 rounded-2xl bg-white text-indigo-700 font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg hover:shadow-white/20"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Submit New Project</span>
+              </button>
+            )}
+
+            {isAdmin && (
+              <Link
+                to="/users"
+                className="inline-flex items-center space-x-2 px-5 py-3 rounded-2xl bg-white text-indigo-700 font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg hover:shadow-white/20"
+              >
+                <Users className="w-4 h-4" />
+                <span>Manage Students & Staff</span>
+              </Link>
+            )}
 
             <button
               onClick={handleManualRefresh}
@@ -203,8 +250,8 @@ export const UserDashboard: React.FC = () => {
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Submissions</span>
-            <div className="text-2xl font-extrabold text-slate-900">{myProjects.length}</div>
-            <span className="text-xs text-slate-500 font-medium">Created by you</span>
+            <div className="text-2xl font-extrabold text-slate-900">{totalSubmissionsCount}</div>
+            <span className="text-xs text-slate-500 font-medium">{isStaff ? 'System / Dept Submissions' : 'Created by you'}</span>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
             <FolderOpen className="w-6 h-6" />
@@ -215,7 +262,7 @@ export const UserDashboard: React.FC = () => {
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Approved Projects</span>
-            <div className="text-2xl font-extrabold text-emerald-700">{myApprovedCount}</div>
+            <div className="text-2xl font-extrabold text-emerald-700">{approvedCount}</div>
             <span className="text-xs text-slate-500 font-medium">Publicly published</span>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
@@ -227,8 +274,8 @@ export const UserDashboard: React.FC = () => {
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Under Review</span>
-            <div className="text-2xl font-extrabold text-sky-700">{myPendingCount}</div>
-            <span className="text-xs text-slate-500 font-medium">Awaiting evaluation</span>
+            <div className="text-2xl font-extrabold text-sky-700">{pendingReviewCount}</div>
+            <span className="text-xs text-slate-500 font-medium">{isStaff ? 'Pending Faculty Review' : 'Awaiting evaluation'}</span>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
             <Clock className="w-6 h-6" />
@@ -239,7 +286,7 @@ export const UserDashboard: React.FC = () => {
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Draft Entries</span>
-            <div className="text-2xl font-extrabold text-amber-700">{myDraftCount}</div>
+            <div className="text-2xl font-extrabold text-amber-700">{draftCount}</div>
             <span className="text-xs text-slate-500 font-medium">In preparation</span>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
@@ -260,7 +307,7 @@ export const UserDashboard: React.FC = () => {
             }`}
           >
             <UserIcon className="w-4 h-4" />
-            <span>My Projects & Usage ({myProjects.length})</span>
+            <span>{isAdmin ? 'System Project Directory' : `My Projects & Usage (${myProjects.length})`}</span>
           </button>
 
           <button
@@ -295,14 +342,18 @@ export const UserDashboard: React.FC = () => {
       {activeTab === 'my-projects' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Your Project Submissions</h2>
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition-colors shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Create Project Draft</span>
-            </button>
+            <h2 className="text-xl font-bold text-slate-900">
+              {isAdmin ? 'System Project Submissions' : 'Your Project Submissions'}
+            </h2>
+            {!isAdmin && (
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Project Draft</span>
+              </button>
+            )}
           </div>
 
           {isLoading ? (
@@ -311,18 +362,64 @@ export const UserDashboard: React.FC = () => {
             <div className="py-12 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-4">
               <FolderGit2 className="w-12 h-12 text-indigo-200 mx-auto" />
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-800">No Projects Created Yet</h3>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {isAdmin ? 'Admin Management Center Active' : 'No Projects Created Yet'}
+                </h3>
                 <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  You have not created any academic project drafts. Click below to submit your capstone or research paper.
+                  {isAdmin
+                    ? 'You are logged in as System Administrator. Use the tabs above to manage users, evaluate pending project submissions, or view all repository catalog entries.'
+                    : 'You have not created any academic project drafts. Click below to submit your capstone or research paper.'}
                 </p>
               </div>
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Your First Project</span>
-              </button>
+              {!isAdmin && (
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Your First Project</span>
+                </button>
+              )}
+
+              {isAdmin && systemUsers.length > 0 && (
+                <div className="text-left space-y-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Official System Accounts Roster ({systemUsers.length} Users)</h4>
+                    <Link to="/users" className="text-xs font-bold text-indigo-600 hover:underline">Manage All Accounts &rarr;</Link>
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/50">
+                    <table className="w-full text-xs text-slate-700">
+                      <thead className="bg-slate-100/80 text-slate-500 font-bold uppercase tracking-wider">
+                        <tr>
+                          <th className="p-2.5 text-left">Email Address</th>
+                          <th className="p-2.5 text-left">Full Name</th>
+                          <th className="p-2.5 text-left">Role</th>
+                          <th className="p-2.5 text-left">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 font-medium">
+                        {systemUsers.map((u) => (
+                          <tr key={u.id} className="hover:bg-white transition-colors">
+                            <td className="p-2.5 font-bold text-slate-900">{u.email}</td>
+                            <td className="p-2.5">{u.firstName} {u.lastName}</td>
+                            <td className="p-2.5">
+                              <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                                u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
+                                u.role === 'FACULTY' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="p-2.5">
+                              <span className="text-emerald-600 font-semibold">{u.userStatus || 'ACTIVE'}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -358,7 +455,7 @@ export const UserDashboard: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       {project.status === 'DRAFT' && (
                         <button
-                          onClick={(e) => handleQuickSubmitDraft(e, project.id)}
+                          onClick={(e) => handleQuickSubmitDraft(e, project)}
                           className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors"
                         >
                           <Send className="w-3 h-3" />
@@ -565,8 +662,11 @@ export const UserDashboard: React.FC = () => {
                     <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed">{project.abstractText}</p>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-700">Author: {project.createdByUserName || project.createdByFullName}</span>
+                  <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div>
+                      <div className="font-semibold text-slate-700">Author: {project.createdByUserName || project.createdByFullName}</div>
+                      <div className="text-indigo-600 font-bold">Guide: {project.guideFacultyName || 'Prof. Geetha (Faculty Guide)'}</div>
+                    </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

@@ -65,6 +65,8 @@ export interface ProjectSummary {
   createdByUserId: number;
   createdByUserName?: string;
   createdByFullName?: string;
+  guideFacultyId?: number;
+  guideFacultyName?: string;
   repositoryUrl?: string;
   createdAt: string;
 }
@@ -122,7 +124,8 @@ export interface CreateProjectRequest {
   visibility: ProjectVisibility;
   departmentId: number;
   repositoryUrl?: string;
-  members?: { userId: number; memberRole: string }[];
+  guideFacultyId?: number;
+  members?: { userId?: number; userEmail?: string; memberRole: string }[];
 }
 
 export interface UpdateProjectRequest {
