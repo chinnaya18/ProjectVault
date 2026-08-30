@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, FolderGit2, Users, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { formatUserNameByRole } from '../utils/userFormat';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -68,8 +69,13 @@ export const Navbar: React.FC = () => {
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-3">
                 <div className="hidden sm:flex flex-col text-right">
-                  <span className="text-sm font-semibold text-slate-800">
-                    {user.firstName} {user.lastName}
+                  <span className="text-sm font-semibold text-slate-800 flex items-center justify-end gap-1.5">
+                    <span>{formatUserNameByRole(user.name || user.email.split('@')[0], user.role)}</span>
+                    {user.rollNo && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                        {user.rollNo}
+                      </span>
+                    )}
                   </span>
                   <span className="text-xs font-medium text-indigo-600">
                     {user.role}

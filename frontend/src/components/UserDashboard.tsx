@@ -5,13 +5,13 @@ import { ProjectSummary, Department, ProjectStatus, ApiResponse, PageResponse } 
 import api from '../api/client';
 import { CreateProjectModal } from './CreateProjectModal';
 import { ProjectDetailModal } from './ProjectDetailModal';
+import { formatFacultyName, formatUserNameByRole } from '../utils/userFormat';
 import { 
   Plus, 
   Search, 
   FolderGit2, 
   Calendar, 
   User as UserIcon, 
-  Sparkles, 
   Filter, 
   ChevronLeft, 
   ChevronRight,
@@ -202,13 +202,14 @@ export const UserDashboard: React.FC = () => {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center space-x-1 bg-indigo-500/30 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-indigo-400/30 text-indigo-100">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Personalized Academic Dashboard</span>
-              </span>
               {user?.role && (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-white/20 text-white border border-white/20 uppercase tracking-wider">
                   {user.role}
+                </span>
+              )}
+              {user?.rollNo && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white/10 text-indigo-100 border border-white/20">
+                  {user.rollNo}
                 </span>
               )}
               {user?.userStatus && (
@@ -221,7 +222,7 @@ export const UserDashboard: React.FC = () => {
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-              Welcome back, {user?.firstName} {user?.lastName}!
+              Welcome back, {formatUserNameByRole(user?.name || user?.email?.split('@')[0], user?.role)}!
             </h1>
 
             <p className="text-indigo-100 text-sm sm:text-base leading-relaxed">
@@ -422,6 +423,7 @@ export const UserDashboard: React.FC = () => {
                         <tr>
                           <th className="p-2.5 text-left">Email Address</th>
                           <th className="p-2.5 text-left">Full Name</th>
+                          <th className="p-2.5 text-left">Roll No</th>
                           <th className="p-2.5 text-left">Role</th>
                           <th className="p-2.5 text-left">Status</th>
                         </tr>
@@ -430,7 +432,8 @@ export const UserDashboard: React.FC = () => {
                         {systemUsers.map((u) => (
                           <tr key={u.id} className="hover:bg-white transition-colors">
                             <td className="p-2.5 font-bold text-slate-900">{u.email}</td>
-                            <td className="p-2.5">{u.firstName} {u.lastName}</td>
+                            <td className="p-2.5 font-medium">{formatUserNameByRole(u.name, u.role)}</td>
+                            <td className="p-2.5 font-mono text-slate-600">{u.rollNo || '—'}</td>
                             <td className="p-2.5">
                               <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
                                 u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
@@ -611,10 +614,18 @@ export const UserDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 font-medium">
                     <div className="flex items-center space-x-1.5">
-                      <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{project.createdByUserName || project.createdByFullName || 'Contributor'}</span>
+                      <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="font-semibold text-slate-700">{project.createdByUserName || 'Contributor'}</span>
+                      {project.createdByRollNo && (
+                        <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                          {project.createdByRollNo}
+                        </span>
+                      )}
+                      <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded">
+                        Student
+                      </span>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -692,9 +703,24 @@ export const UserDashboard: React.FC = () => {
                   </div>
 
                   <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div>
-                      <div className="font-semibold text-slate-700">Author: {project.createdByUserName || project.createdByFullName}</div>
-                      <div className="text-indigo-600 font-bold">Guide: {project.guideFacultyName || 'Prof. Geetha (Faculty Guide)'}</div>
+                    <div className="space-y-1">
+                      <div className="font-semibold text-slate-700 flex items-center gap-1.5">
+                        <span>Author: {project.createdByUserName}</span>
+                        {project.createdByRollNo && (
+                          <span className="text-[11px] font-mono px-1.5 py-0.2 bg-slate-100 text-slate-600 border border-slate-200 rounded">
+                            {project.createdByRollNo}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded">
+                          Student
+                        </span>
+                      </div>
+                      <div className="text-emerald-700 font-bold flex items-center gap-1.5">
+                        <span>Guide: {formatFacultyName(project.guideFacultyName)}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">
+                          Faculty Guide
+                        </span>
+                      </div>
                     </div>
                     <button
                       onClick={(e) => {

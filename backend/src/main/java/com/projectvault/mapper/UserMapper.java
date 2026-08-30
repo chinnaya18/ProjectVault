@@ -18,8 +18,8 @@ public class UserMapper {
         return new UserSummaryDto(
                 user.getId(),
                 user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
+                user.getName(),
+                user.getRollNo(),
                 user.getRole(),
                 user.getUserStatus(),
                 deptId,

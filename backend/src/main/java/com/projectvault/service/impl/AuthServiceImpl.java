@@ -63,11 +63,18 @@ public class AuthServiceImpl implements AuthService {
                     .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
         }
 
+        String rollNo = request.getRollNo();
+        if (rollNo == null || rollNo.isBlank()) {
+            if (request.getEmail() != null && request.getEmail().contains("@")) {
+                rollNo = request.getEmail().split("@")[0].toUpperCase();
+            }
+        }
+
         User user = new User(
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword()),
-                request.getFirstName(),
-                request.getLastName(),
+                request.getName(),
+                rollNo,
                 Role.STUDENT,
                 department
         );

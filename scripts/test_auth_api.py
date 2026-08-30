@@ -40,8 +40,8 @@ def run_tests():
     reg_payload = {
         "email": "test.student@projectvault.edu",
         "password": "Password@123",
-        "firstName": "Test",
-        "lastName": "Student",
+        "name": "Test Student",
+        "rollNo": "25MX999",
         "departmentId": 1
     }
     status, reg_res = make_request(f"{BASE_URL}/auth/register", method="POST", data=reg_payload)

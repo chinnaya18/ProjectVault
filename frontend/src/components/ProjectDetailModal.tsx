@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProjectDetail, ProjectStatus, ProjectVisibility, ApiResponse, ProjectFile } from '../types';
 import api, { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { formatFacultyName } from '../utils/userFormat';
 import { 
   X, 
   ExternalLink, 
@@ -417,13 +418,28 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
 
                   {/* Meta details & repo */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                    <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                      <span className="text-xs font-semibold text-slate-400 block mb-1">Created By</span>
-                      <span className="font-semibold text-slate-800">{project.createdByUserName || project.createdByFullName || 'Contributor'}</span>
+                    <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1">
+                      <span className="text-xs font-semibold text-slate-400 block">Created By</span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-slate-800">{project.createdByUserName || project.createdByFullName || 'Contributor'}</span>
+                        {project.createdByRollNo && (
+                          <span className="text-[11px] font-mono px-1.5 py-0.2 bg-slate-100 text-slate-600 border border-slate-200 rounded font-semibold">
+                            {project.createdByRollNo}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded">
+                          Student
+                        </span>
+                      </div>
                     </div>
-                    <div className="p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/50">
-                      <span className="text-xs font-bold text-indigo-600 block mb-1">Designated Faculty Guide</span>
-                      <span className="font-bold text-indigo-900">{project.guideFacultyName || 'Prof. Geetha (Faculty Guide)'}</span>
+                    <div className="p-3.5 rounded-xl border border-emerald-100 bg-emerald-50/40 space-y-1">
+                      <span className="text-xs font-bold text-emerald-700 block">Designated Faculty Guide</span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-bold text-emerald-950">{formatFacultyName(project.guideFacultyName)}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded">
+                          Faculty Guide
+                        </span>
+                      </div>
                     </div>
                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                       <span className="text-xs font-semibold text-slate-400 block mb-1">Repository</span>
@@ -538,16 +554,30 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                           >
                             <div className="flex items-center space-x-3">
                               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xs">
-                                {(member.userFullName || 'U').charAt(0)}
+                                {((member.userName || member.userFullName || 'U')).charAt(0)}
                               </div>
                               <div>
-                                <div className="text-sm font-semibold text-slate-900">{member.userFullName || member.userEmail || 'Team Member'}</div>
+                                <div className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                                  <span>{member.userName || member.userFullName || member.userEmail}</span>
+                                  {member.userRollNo && (
+                                    <span className="text-[11px] font-mono px-1.5 py-0.2 bg-slate-100 text-slate-600 border border-slate-200 rounded font-semibold">
+                                      {member.userRollNo}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-xs text-slate-500">{member.userEmail}</div>
                               </div>
                             </div>
-                            <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">
-                              {member.memberRole}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {member.userRole && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                  {member.userRole}
+                                </span>
+                              )}
+                              <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">
+                                {member.memberRole}
+                              </span>
+                            </div>
                           </div>
                         ))
                       ) : (
@@ -580,7 +610,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                               </div>
                             </div>
                             <div className="text-xs text-slate-500 font-medium">
-                              Transitioned by: <span className="text-slate-700 font-semibold">{history.changedByFullName || 'System'}</span>
+                              Transitioned by: <span className="text-slate-700 font-semibold">{history.changedByUserName || history.changedByFullName || 'System'}</span>
                             </div>
                           </div>
                         ))}

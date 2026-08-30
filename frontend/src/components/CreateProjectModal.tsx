@@ -4,6 +4,8 @@ import api, { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 
+import { formatFacultyName } from '../utils/userFormat';
+
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,7 +31,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
 
   const [teamCount, setTeamCount] = useState<number>(1);
   const [teamMembers, setTeamMembers] = useState<{ email: string; name: string }[]>([
-    { email: user?.email || '', name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() }
+    { email: user?.email || '', name: user?.name || '' }
   ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +45,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       fetchFaculty();
       if (user) {
         setTeamMembers((prev) => {
-          const first = { email: user.email, name: `${user.firstName} ${user.lastName}`.trim() };
+          const first = { email: user.email, name: user.name || '' };
           const result = [first];
           for (let i = 1; i < teamCount; i++) {
             result.push(prev[i] || { email: '', name: '' });
@@ -62,7 +64,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
           .filter((u: any) => u.role === 'FACULTY')
           .map((u: any) => ({
             id: u.id,
-            name: `Prof. ${u.firstName} ${u.lastName} (${u.email})`
+            name: `${formatFacultyName(u.name)} (${u.email})`
           }));
         if (faculties.length > 0) {
           setFacultyList(faculties);
@@ -270,9 +272,9 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                   ))
                 ) : (
                   <>
-                    <option value={2}>Prof. Geetha (Faculty Guide)</option>
-                    <option value={3}>Prof. Gayathri (Faculty Guide)</option>
-                    <option value={4}>Prof. Manavalan (Faculty Guide)</option>
+                    <option value={2}>Ms. Geetha (Faculty Guide)</option>
+                    <option value={3}>Ms. Gayathri (Faculty Guide)</option>
+                    <option value={4}>Mr. Manavalan (Faculty Guide)</option>
                   </>
                 )}
               </select>

@@ -15,8 +15,8 @@ export interface Department {
 export interface User {
   id: number;
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
+  rollNo?: string;
   role: Role;
   userStatus: UserStatus;
   departmentId?: number;
@@ -29,8 +29,11 @@ export interface User {
 export interface ProjectMember {
   id: number;
   userId: number;
-  userFullName: string;
+  userName?: string;
+  userFullName?: string;
   userEmail: string;
+  userRollNo?: string;
+  userRole?: Role;
   memberRole: string;
 }
 
@@ -39,7 +42,8 @@ export interface ProjectWorkflowHistory {
   fromStatus?: ProjectStatus;
   toStatus: ProjectStatus;
   changedByUserId: number;
-  changedByFullName: string;
+  changedByUserName?: string;
+  changedByFullName?: string;
   createdAt: string;
 }
 
@@ -64,6 +68,7 @@ export interface ProjectSummary {
   departmentName: string;
   createdByUserId: number;
   createdByUserName?: string;
+  createdByRollNo?: string;
   createdByFullName?: string;
   guideFacultyId?: number;
   guideFacultyName?: string;
@@ -105,8 +110,8 @@ export interface AuthResponse {
 export interface RegisterRequest {
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  name: string;
+  rollNo?: string;
   departmentId?: number;
 }
 

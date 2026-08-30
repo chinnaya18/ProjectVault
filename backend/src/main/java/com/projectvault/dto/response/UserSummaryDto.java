@@ -7,8 +7,8 @@ public class UserSummaryDto {
 
     private Long id;
     private String email;
-    private String firstName;
-    private String lastName;
+    private String name;
+    private String rollNo;
     private Role role;
     private UserStatus userStatus;
     private Long departmentId;
@@ -16,11 +16,11 @@ public class UserSummaryDto {
 
     public UserSummaryDto() {}
 
-    public UserSummaryDto(Long id, String email, String firstName, String lastName, Role role, UserStatus userStatus, Long departmentId, String departmentName) {
+    public UserSummaryDto(Long id, String email, String name, String rollNo, Role role, UserStatus userStatus, Long departmentId, String departmentName) {
         this.id = id;
         this.email = email;
-        this.firstName = firstName;
-        this.lastName = lastName;
+        this.name = name;
+        this.rollNo = rollNo;
         this.role = role;
         this.userStatus = userStatus;
         this.departmentId = departmentId;
@@ -43,20 +43,20 @@ public class UserSummaryDto {
         this.email = email;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getLastName() {
-        return lastName;
+    public String getRollNo() {
+        return rollNo;
     }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setRollNo(String rollNo) {
+        this.rollNo = rollNo;
     }
 
     public Role getRole() {

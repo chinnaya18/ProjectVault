@@ -26,21 +26,22 @@ def seed_roles():
     
     # 1. Register Accounts
     accounts = [
-        ("admin@university.edu", "Password@123", "System", "Admin", "ADMIN"),
-        ("geetha@university.edu", "Password@123", "Geetha", "Faculty", "FACULTY"),
-        ("gayathri@university.edu", "Password@123", "Gayathri", "Faculty", "FACULTY"),
-        ("manavalan@university.edu", "Password@123", "Manavalan", "Faculty", "FACULTY"),
-        ("25mx101@university.edu", "Password@123", "Bala", "Student", "STUDENT"),
-        ("25mx102@university.edu", "Password@123", "Gopi", "Student", "STUDENT"),
-        ("25mx103@university.edu", "Password@123", "Kaleel", "Student", "STUDENT"),
-        ("25mx104@university.edu", "Password@123", "Vikram", "Student", "STUDENT"),
-        ("25mx105@university.edu", "Password@123", "Chinnaya", "Student", "STUDENT"),
-        ("25mx106@university.edu", "Password@123", "Saravanavel", "Student", "STUDENT")
+        ("admin@university.edu", "Password@123", "System Admin", None, "ADMIN"),
+        ("geetha@university.edu", "Password@123", "Geetha", None, "FACULTY"),
+        ("gayathri@university.edu", "Password@123", "Gayathri", None, "FACULTY"),
+        ("manavalan@university.edu", "Password@123", "Manavalan", None, "FACULTY"),
+        ("25mx101@university.edu", "Password@123", "Bala", "25MX101", "STUDENT"),
+        ("25mx102@university.edu", "Password@123", "Gopi", "25MX102", "STUDENT"),
+        ("25mx103@university.edu", "Password@123", "Kaleel", "25MX103", "STUDENT"),
+        ("25mx104@university.edu", "Password@123", "Vikram", "25MX104", "STUDENT"),
+        ("25mx105@university.edu", "Password@123", "Chinnaya", "25MX105", "STUDENT"),
+        ("25mx106@university.edu", "Password@123", "Saravanavel", "25MX106", "STUDENT")
     ]
-    for email, pwd, fname, lname, _ in accounts:
-        status, res = make_request(f"{BASE_URL}/auth/register", method="POST", data={
-            "email": email, "password": pwd, "firstName": fname, "lastName": lname, "departmentId": 1
-        })
+    for email, pwd, name, roll_no, _ in accounts:
+        payload = {"email": email, "password": pwd, "name": name, "departmentId": 1}
+        if roll_no:
+            payload["rollNo"] = roll_no
+        status, res = make_request(f"{BASE_URL}/auth/register", method="POST", data=payload)
         print(f"Register {email}: Status [{status}]")
 
     # 2. Login as Admin

@@ -20,6 +20,7 @@ public class ProjectDetailDto {
     private String departmentName;
     private Long createdByUserId;
     private String createdByUserName;
+    private String createdByRollNo;
     private Long guideFacultyId;
     private String guideFacultyName;
     private String repositoryUrl;
@@ -31,7 +32,7 @@ public class ProjectDetailDto {
 
     public ProjectDetailDto() {}
 
-    public ProjectDetailDto(Long id, String title, String abstractText, String academicYear, Integer semester, String projectType, ProjectStatus status, ProjectVisibility visibility, Long departmentId, String departmentName, Long createdByUserId, String createdByUserName, String repositoryUrl, LocalDateTime createdAt, LocalDateTime updatedAt, List<ProjectMemberDto> members) {
+    public ProjectDetailDto(Long id, String title, String abstractText, String academicYear, Integer semester, String projectType, ProjectStatus status, ProjectVisibility visibility, Long departmentId, String departmentName, Long createdByUserId, String createdByUserName, String createdByRollNo, String repositoryUrl, LocalDateTime createdAt, LocalDateTime updatedAt, List<ProjectMemberDto> members) {
         this.id = id;
         this.title = title;
         this.abstractText = abstractText;
@@ -44,6 +45,7 @@ public class ProjectDetailDto {
         this.departmentName = departmentName;
         this.createdByUserId = createdByUserId;
         this.createdByUserName = createdByUserName;
+        this.createdByRollNo = createdByRollNo;
         this.repositoryUrl = repositoryUrl;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -144,6 +146,14 @@ public class ProjectDetailDto {
 
     public void setCreatedByUserName(String createdByUserName) {
         this.createdByUserName = createdByUserName;
+    }
+
+    public String getCreatedByRollNo() {
+        return createdByRollNo;
+    }
+
+    public void setCreatedByRollNo(String createdByRollNo) {
+        this.createdByRollNo = createdByRollNo;
     }
 
     public Long getGuideFacultyId() {

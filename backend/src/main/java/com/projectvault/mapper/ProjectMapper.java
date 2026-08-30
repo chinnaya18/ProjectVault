@@ -22,11 +22,10 @@ public class ProjectMapper {
         Long deptId = project.getDepartment() != null ? project.getDepartment().getId() : null;
         String deptName = project.getDepartment() != null ? project.getDepartment().getName() : null;
         Long createdById = project.getCreatedBy() != null ? project.getCreatedBy().getId() : null;
-        String createdByName = project.getCreatedBy() != null ?
-                project.getCreatedBy().getFirstName() + " " + project.getCreatedBy().getLastName() : null;
+        String createdByName = project.getCreatedBy() != null ? project.getCreatedBy().getName() : null;
+        String createdByRollNo = project.getCreatedBy() != null ? project.getCreatedBy().getRollNo() : null;
         Long guideId = project.getGuideFaculty() != null ? project.getGuideFaculty().getId() : null;
-        String guideName = project.getGuideFaculty() != null ?
-                project.getGuideFaculty().getFirstName() + " " + project.getGuideFaculty().getLastName() : null;
+        String guideName = project.getGuideFaculty() != null ? project.getGuideFaculty().getName() : null;
 
         ProjectSummaryDto dto = new ProjectSummaryDto(
                 project.getId(),
@@ -41,6 +40,7 @@ public class ProjectMapper {
                 deptName,
                 createdById,
                 createdByName,
+                createdByRollNo,
                 project.getCreatedAt()
         );
         dto.setGuideFacultyId(guideId);
@@ -55,13 +55,17 @@ public class ProjectMapper {
         User user = member.getUser();
         Long userId = user != null ? user.getId() : null;
         String email = user != null ? user.getEmail() : null;
-        String name = user != null ? user.getFirstName() + " " + user.getLastName() : null;
+        String name = user != null ? user.getName() : null;
+        String rollNo = user != null ? user.getRollNo() : null;
+        String role = user != null && user.getRole() != null ? user.getRole().name() : null;
 
         return new ProjectMemberDto(
                 member.getId(),
                 userId,
                 email,
                 name,
+                rollNo,
+                role,
                 member.getMemberRole()
         );
     }
@@ -74,11 +78,10 @@ public class ProjectMapper {
         Long deptId = project.getDepartment() != null ? project.getDepartment().getId() : null;
         String deptName = project.getDepartment() != null ? project.getDepartment().getName() : null;
         Long createdById = project.getCreatedBy() != null ? project.getCreatedBy().getId() : null;
-        String createdByName = project.getCreatedBy() != null ?
-                project.getCreatedBy().getFirstName() + " " + project.getCreatedBy().getLastName() : null;
+        String createdByName = project.getCreatedBy() != null ? project.getCreatedBy().getName() : null;
+        String createdByRollNo = project.getCreatedBy() != null ? project.getCreatedBy().getRollNo() : null;
         Long guideId = project.getGuideFaculty() != null ? project.getGuideFaculty().getId() : null;
-        String guideName = project.getGuideFaculty() != null ?
-                project.getGuideFaculty().getFirstName() + " " + project.getGuideFaculty().getLastName() : null;
+        String guideName = project.getGuideFaculty() != null ? project.getGuideFaculty().getName() : null;
 
         List<ProjectMemberDto> memberDtos = members != null ?
                 members.stream().map(this::toProjectMemberDto).collect(Collectors.toList()) : List.of();
@@ -96,6 +99,7 @@ public class ProjectMapper {
                 deptName,
                 createdById,
                 createdByName,
+                createdByRollNo,
                 project.getRepositoryUrl(),
                 project.getCreatedAt(),
                 project.getUpdatedAt(),
@@ -109,7 +113,7 @@ public class ProjectMapper {
     public com.projectvault.dto.response.ProjectWorkflowHistoryDto toProjectWorkflowHistoryDto(com.projectvault.entity.ProjectWorkflowHistory history) {
         if (history == null) return null;
         Long userId = history.getChangedBy() != null ? history.getChangedBy().getId() : null;
-        String userName = history.getChangedBy() != null ? history.getChangedBy().getFirstName() + " " + history.getChangedBy().getLastName() : "System";
+        String userName = history.getChangedBy() != null ? history.getChangedBy().getName() : "System";
         return new com.projectvault.dto.response.ProjectWorkflowHistoryDto(
                 history.getId(),
                 history.getFromStatus(),

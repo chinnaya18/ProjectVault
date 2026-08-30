@@ -4,6 +4,7 @@ import { User, Role, UserStatus, ApiResponse, PageResponse } from '../types';
 import api, { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Users as UsersIcon, AlertCircle } from 'lucide-react';
+import { formatUserNameByRole } from '../utils/userFormat';
 
 export const UsersPage: React.FC = () => {
   const { user: currentUser, isLoading: isAuthLoading } = useAuth();
@@ -164,12 +165,16 @@ export const UsersPage: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                            {u.firstName.charAt(0)}
-                            {u.lastName.charAt(0)}
+                            {(u.name || u.email).charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <div className="font-semibold text-slate-900 flex items-center space-x-2">
-                              <span>{u.firstName} {u.lastName}</span>
+                              <span>{formatUserNameByRole(u.name, u.role)}</span>
+                              {u.rollNo && (
+                                <span className="px-2 py-0.5 text-[11px] font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200 rounded-md">
+                                  {u.rollNo}
+                                </span>
+                              )}
                               {isSelf && (
                                 <span className="px-2 py-0.5 text-[10px] font-extrabold bg-indigo-100 text-indigo-700 rounded-full">
                                   You / Active Session

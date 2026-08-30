@@ -11,8 +11,8 @@ export const RegisterPage: React.FC = () => {
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
+    rollNo: '',
     email: '',
     password: '',
     departmentId: 0,
@@ -45,8 +45,8 @@ export const RegisterPage: React.FC = () => {
     setError(null);
     try {
       await register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        name: formData.name,
+        rollNo: formData.rollNo || undefined,
         email: formData.email,
         password: formData.password,
         departmentId: formData.departmentId > 0 ? formData.departmentId : undefined,
@@ -82,7 +82,7 @@ export const RegisterPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                First Name *
+                Full Name *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -91,25 +91,24 @@ export const RegisterPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="John"
+                  placeholder="e.g. Bala"
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Last Name *
+                Roll Number (Optional)
               </label>
               <input
                 type="text"
-                required
-                placeholder="Doe"
+                placeholder="e.g. 25MX101"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                value={formData.rollNo}
+                onChange={(e) => setFormData({ ...formData, rollNo: e.target.value.toUpperCase() })}
               />
             </div>
           </div>

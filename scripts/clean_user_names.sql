@@ -1,0 +1,10 @@
+UPDATE users SET name = 'System Admin' WHERE email = 'admin@university.edu';
+UPDATE users SET name = 'Geetha' WHERE email = 'geetha@university.edu';
+UPDATE users SET name = 'Gayathri' WHERE email = 'gayathri@university.edu';
+UPDATE users SET name = 'Manavalan' WHERE email = 'manavalan@university.edu';
+UPDATE users SET name = 'Bala', roll_no = '25MX101' WHERE email = '25mx101@university.edu';
+UPDATE users SET name = 'Gopi', roll_no = '25MX102' WHERE email = '25mx102@university.edu';
+UPDATE users SET name = 'Kaleel', roll_no = '25MX103' WHERE email = '25mx103@university.edu';
+UPDATE users SET name = 'Vikram', roll_no = '25MX104' WHERE email = '25mx104@university.edu';
+UPDATE users SET name = 'Chinnaya', roll_no = '25MX105' WHERE email = '25mx105@university.edu';
+UPDATE users SET name = 'Saravanavel', roll_no = '25MX106' WHERE email = '25mx106@university.edu';

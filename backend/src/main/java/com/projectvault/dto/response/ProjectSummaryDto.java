@@ -19,13 +19,14 @@ public class ProjectSummaryDto {
     private String departmentName;
     private Long createdByUserId;
     private String createdByUserName;
+    private String createdByRollNo;
     private Long guideFacultyId;
     private String guideFacultyName;
     private LocalDateTime createdAt;
 
     public ProjectSummaryDto() {}
 
-    public ProjectSummaryDto(Long id, String title, String abstractText, String academicYear, Integer semester, String projectType, ProjectStatus status, ProjectVisibility visibility, Long departmentId, String departmentName, Long createdByUserId, String createdByUserName, LocalDateTime createdAt) {
+    public ProjectSummaryDto(Long id, String title, String abstractText, String academicYear, Integer semester, String projectType, ProjectStatus status, ProjectVisibility visibility, Long departmentId, String departmentName, Long createdByUserId, String createdByUserName, String createdByRollNo, LocalDateTime createdAt) {
         this.id = id;
         this.title = title;
         this.abstractText = abstractText;
@@ -38,6 +39,7 @@ public class ProjectSummaryDto {
         this.departmentName = departmentName;
         this.createdByUserId = createdByUserId;
         this.createdByUserName = createdByUserName;
+        this.createdByRollNo = createdByRollNo;
         this.createdAt = createdAt;
     }
 
@@ -135,6 +137,14 @@ public class ProjectSummaryDto {
 
     public void setCreatedByUserName(String createdByUserName) {
         this.createdByUserName = createdByUserName;
+    }
+
+    public String getCreatedByRollNo() {
+        return createdByRollNo;
+    }
+
+    public void setCreatedByRollNo(String createdByRollNo) {
+        this.createdByRollNo = createdByRollNo;
     }
 
     public Long getGuideFacultyId() {

@@ -196,10 +196,18 @@ export const PublicLandingPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <div className="pt-4 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 font-medium">
                   <div className="flex items-center space-x-1.5">
-                    <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{getAuthorName(project)}</span>
+                    <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="font-semibold text-slate-700">{getAuthorName(project)}</span>
+                    {project.createdByRollNo && (
+                      <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                        {project.createdByRollNo}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded">
+                      Student
+                    </span>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />

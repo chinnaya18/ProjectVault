@@ -14,23 +14,22 @@ public class RegisterRequest {
     @Size(min = 6, max = 50, message = "Password must be between 6 and 50 characters")
     private String password;
 
-    @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "First name cannot exceed 50 characters")
-    private String firstName;
+    @NotBlank(message = "Name is required")
+    @Size(max = 150, message = "Name cannot exceed 150 characters")
+    private String name;
 
-    @NotBlank(message = "Last name is required")
-    @Size(max = 50, message = "Last name cannot exceed 50 characters")
-    private String lastName;
+    @Size(max = 50, message = "Roll number cannot exceed 50 characters")
+    private String rollNo;
 
     private Long departmentId;
 
     public RegisterRequest() {}
 
-    public RegisterRequest(String email, String password, String firstName, String lastName, Long departmentId) {
+    public RegisterRequest(String email, String password, String name, String rollNo, Long departmentId) {
         this.email = email;
         this.password = password;
-        this.firstName = firstName;
-        this.lastName = lastName;
+        this.name = name;
+        this.rollNo = rollNo;
         this.departmentId = departmentId;
     }
 
@@ -50,20 +49,20 @@ public class RegisterRequest {
         this.password = password;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getLastName() {
-        return lastName;
+    public String getRollNo() {
+        return rollNo;
     }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setRollNo(String rollNo) {
+        this.rollNo = rollNo;
     }
 
     public Long getDepartmentId() {

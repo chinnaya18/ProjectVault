@@ -17,11 +17,11 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "first_name", nullable = false, length = 50)
-    private String firstName;
+    @Column(nullable = false, length = 150)
+    private String name;
 
-    @Column(name = "last_name", nullable = false, length = 50)
-    private String lastName;
+    @Column(name = "roll_no", length = 50)
+    private String rollNo;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -52,11 +52,11 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public User(String email, String passwordHash, String firstName, String lastName, Role role, Department department) {
+    public User(String email, String passwordHash, String name, String rollNo, Role role, Department department) {
         this.email = email;
         this.passwordHash = passwordHash;
-        this.firstName = firstName;
-        this.lastName = lastName;
+        this.name = name;
+        this.rollNo = rollNo;
         this.role = role != null ? role : Role.STUDENT;
         this.userStatus = UserStatus.ACTIVE;
         this.department = department;
@@ -101,20 +101,20 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getLastName() {
-        return lastName;
+    public String getRollNo() {
+        return rollNo;
     }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setRollNo(String rollNo) {
+        this.rollNo = rollNo;
     }
 
     public Role getRole() {
