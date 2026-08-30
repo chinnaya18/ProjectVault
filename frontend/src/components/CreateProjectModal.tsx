@@ -108,7 +108,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
 
     const payload = {
       ...formData,
-      members: teamMembers.slice(0, teamCount).map((m, idx) => ({
+      members: teamMembers.slice(0, teamCount).map((_, idx) => ({
         userId: user?.id || 1,
         memberRole: idx === 0 ? 'Project Lead / Author' : `Team Member #${idx + 1}`
       }))
