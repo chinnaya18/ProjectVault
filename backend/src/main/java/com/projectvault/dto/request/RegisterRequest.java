@@ -18,9 +18,11 @@ public class RegisterRequest {
     @Size(max = 150, message = "Name cannot exceed 150 characters")
     private String name;
 
+    @NotBlank(message = "Roll number is required")
     @Size(max = 50, message = "Roll number cannot exceed 50 characters")
     private String rollNo;
 
+    @jakarta.validation.constraints.NotNull(message = "Department is required")
     private Long departmentId;
 
     public RegisterRequest() {}

@@ -15,10 +15,19 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
-      await login({ email, password });
+      await login({ email: email.trim(), password });
       navigate('/');
     } catch (err: any) {
       setError(getErrorMessage(err, 'Invalid email or password'));

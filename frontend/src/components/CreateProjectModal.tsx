@@ -26,7 +26,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
     visibility: 'PUBLIC',
     departmentId: 0,
     repositoryUrl: '',
-    guideFacultyId: 2, // Default to Geetha
+    guideFacultyId: 0,
   });
 
   const [teamCount, setTeamCount] = useState<number>(1);
@@ -81,9 +81,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       const res = await api.get<ApiResponse<PageResponse<Department>>>('/departments?size=100');
       if (res.data && res.data.data && res.data.data.content) {
         setDepartments(res.data.data.content);
-        if (res.data.data.content.length > 0) {
-          setFormData((prev) => ({ ...prev, departmentId: res.data.data.content[0].id }));
-        }
       }
     } catch (err) {
       console.error('Failed to load departments:', err);
@@ -96,11 +93,11 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.departmentId) {
-      setError('Please select an academic department');
+    if (!formData.departmentId || formData.departmentId <= 0) {
+      setError('Please select an Academic Department');
       return;
     }
-    if (!formData.guideFacultyId) {
+    if (!formData.guideFacultyId || formData.guideFacultyId <= 0) {
       setError('Please select a designated Faculty Guide for the project');
       return;
     }
@@ -191,11 +188,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
               <select
                 required
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900 bg-white"
-                value={formData.departmentId}
+                value={formData.departmentId || ''}
                 onChange={(e) => setFormData({ ...formData, departmentId: Number(e.target.value) })}
               >
+                <option value="">Select Academic Department *</option>
                 {isLoadingDepartments ? (
-                  <option value={0}>Loading departments...</option>
+                  <option value="" disabled>Loading departments...</option>
                 ) : (
                   departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
@@ -263,7 +261,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                 value={formData.guideFacultyId || ''}
                 onChange={(e) => setFormData({ ...formData, guideFacultyId: Number(e.target.value) })}
               >
-                <option value="">Select Designated Faculty Guide</option>
+                <option value="">Select Designated Faculty Guide *</option>
                 {facultyList.length > 0 ? (
                   facultyList.map((f) => (
                     <option key={f.id} value={f.id}>

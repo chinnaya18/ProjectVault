@@ -34,6 +34,7 @@ public class CreateProjectRequest {
 
     private String repositoryUrl;
 
+    @NotNull(message = "Faculty guide is required")
     private Long guideFacultyId;
 
     @Valid

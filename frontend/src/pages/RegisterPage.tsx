@@ -30,9 +30,6 @@ export const RegisterPage: React.FC = () => {
       const res = await api.get<ApiResponse<PageResponse<Department>>>('/departments?size=100');
       if (res.data && res.data.data && res.data.data.content) {
         setDepartments(res.data.data.content);
-        if (res.data.data.content.length > 0) {
-          setFormData((prev) => ({ ...prev, departmentId: res.data.data.content[0].id }));
-        }
       }
     } catch (err) {
       console.error('Failed to load departments:', err);
@@ -41,15 +38,36 @@ export const RegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      setError('Please enter your full name');
+      return;
+    }
+    if (!formData.rollNo.trim()) {
+      setError('Please enter your roll number');
+      return;
+    }
+    if (!formData.email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!formData.password || formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    if (!formData.departmentId || formData.departmentId <= 0) {
+      setError('Please select your academic department');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
       await register({
-        name: formData.name,
-        rollNo: formData.rollNo || undefined,
-        email: formData.email,
+        name: formData.name.trim(),
+        rollNo: formData.rollNo.trim().toUpperCase(),
+        email: formData.email.trim(),
         password: formData.password,
-        departmentId: formData.departmentId > 0 ? formData.departmentId : undefined,
+        departmentId: formData.departmentId,
       });
       navigate('/');
     } catch (err: any) {
@@ -101,10 +119,11 @@ export const RegisterPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Roll Number (Optional)
+                Roll Number *
               </label>
               <input
                 type="text"
+                required
                 placeholder="e.g. 25MX101"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900"
                 value={formData.rollNo}
@@ -154,26 +173,24 @@ export const RegisterPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-              Academic Department
+              Academic Department *
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <Building2 className="w-4 h-4" />
               </div>
               <select
+                required
                 className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900 bg-white"
                 value={formData.departmentId}
                 onChange={(e) => setFormData({ ...formData, departmentId: Number(e.target.value) })}
               >
-                {departments.length === 0 ? (
-                  <option value={0}>No departments created yet (optional)</option>
-                ) : (
-                  departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name} ({dept.code})
-                    </option>
-                  ))
-                )}
+                <option value={0}>Select Academic Department *</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name} ({dept.code})
+                  </option>
+                ))}
               </select>
             </div>
           </div>

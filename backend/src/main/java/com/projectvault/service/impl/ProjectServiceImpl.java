@@ -155,10 +155,13 @@ public class ProjectServiceImpl implements ProjectService {
                 request.getRepositoryUrl()
         );
 
-        if (request.getGuideFacultyId() != null) {
-            User guide = userRepository.findById(request.getGuideFacultyId()).orElse(null);
-            project.setGuideFaculty(guide);
+        if (request.getGuideFacultyId() == null) {
+            throw new BadRequestException("A designated Faculty Guide is required for the project.");
         }
+
+        User guide = userRepository.findById(request.getGuideFacultyId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getGuideFacultyId()));
+        project.setGuideFaculty(guide);
 
         Project savedProject = projectRepository.save(project);
 
@@ -218,6 +221,11 @@ public class ProjectServiceImpl implements ProjectService {
         if (request.getProjectType() != null) project.setProjectType(request.getProjectType());
         if (request.getVisibility() != null) project.setVisibility(request.getVisibility());
         if (request.getRepositoryUrl() != null) project.setRepositoryUrl(request.getRepositoryUrl());
+        if (request.getGuideFacultyId() != null) {
+            User guide = userRepository.findById(request.getGuideFacultyId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getGuideFacultyId()));
+            project.setGuideFaculty(guide);
+        }
 
         Project updated = projectRepository.save(project);
         List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
@@ -283,6 +291,9 @@ public class ProjectServiceImpl implements ProjectService {
             if (!isCreator && !isAdmin) {
                 throw new ForbiddenException("Only the project author can submit a draft project.");
             }
+            if (project.getGuideFaculty() == null) {
+                throw new BadRequestException("Cannot submit draft for review: A designated Faculty Guide must be selected.");
+            }
             // Mandatory Document / Repository URL check before draft submission
             boolean hasFiles = !projectFileRepository.findByProjectId(project.getId()).isEmpty();
             boolean hasRepoUrl = project.getRepositoryUrl() != null && !project.getRepositoryUrl().trim().isEmpty();
@@ -343,6 +354,13 @@ public class ProjectServiceImpl implements ProjectService {
             throw new BadRequestException("Non-admin users can only delete project entries in DRAFT status.");
         }
 
+        List<ProjectFile> files = projectFileRepository.findByProjectId(id);
+        for (ProjectFile f : files) {
+            try {
+                Path path = Paths.get(f.getStoragePath());
+                Files.deleteIfExists(path);
+            } catch (IOException ignored) {}
+        }
         projectWorkflowHistoryRepository.deleteByProjectId(id);
         projectFileRepository.deleteByProjectId(id);
         projectMemberRepository.deleteByProjectId(id);
@@ -380,12 +398,17 @@ public class ProjectServiceImpl implements ProjectService {
 
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
+            User uploader = userRepository.findById(currentUser.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", currentUser.getId()));
+
             ProjectFile projectFile = new ProjectFile(
                     project,
                     file.getOriginalFilename(),
                     file.getContentType() != null ? file.getContentType() : "application/octet-stream",
                     filePath.toString(),
-                    file.getSize()
+                    file.getSize(),
+                    "LOCAL",
+                    uploader
             );
 
             ProjectFile savedFile = projectFileRepository.save(projectFile);
@@ -406,8 +429,23 @@ public class ProjectServiceImpl implements ProjectService {
             throw new BadRequestException("File does not belong to specified project.");
         }
 
+        Project project = projectFile.getProject();
+        if (project.getStatus() != ProjectStatus.APPROVED || project.getVisibility() != ProjectVisibility.PUBLIC) {
+            if (currentUser == null) {
+                throw new ForbiddenException("Authentication required to download attachments of non-approved projects.");
+            }
+            boolean isCreator = project.getCreatedBy() != null && project.getCreatedBy().getId().equals(currentUser.getId());
+            boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            boolean isGuide = project.getGuideFaculty() != null && project.getGuideFaculty().getId().equals(currentUser.getId());
+            boolean isMember = projectMemberRepository.findByProjectId(projectId).stream()
+                    .anyMatch(m -> m.getUser() != null && m.getUser().getId().equals(currentUser.getId()));
+            if (!isCreator && !isAdmin && !isGuide && !isMember) {
+                throw new ForbiddenException("Access denied: You do not have permission to download this attachment.");
+            }
+        }
+
         try {
-            Path filePath = Paths.get(projectFile.getFilePath());
+            Path filePath = Paths.get(projectFile.getStoragePath());
             Resource resource = new UrlResource(filePath.toUri());
 
             if (resource.exists() || resource.isReadable()) {
@@ -447,7 +485,7 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         try {
-            Path path = Paths.get(projectFile.getFilePath());
+            Path path = Paths.get(projectFile.getStoragePath());
             Files.deleteIfExists(path);
         } catch (IOException e) {
             // Log file deletion issue but proceed to remove DB entry

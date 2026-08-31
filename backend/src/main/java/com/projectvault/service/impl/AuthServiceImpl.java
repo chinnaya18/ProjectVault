@@ -57,18 +57,16 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email is already registered: " + request.getEmail());
         }
 
-        Department department = null;
-        if (request.getDepartmentId() != null) {
-            department = departmentRepository.findById(request.getDepartmentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
+        if (request.getDepartmentId() == null) {
+            throw new BadRequestException("Academic Department is required for registration.");
         }
+        Department department = departmentRepository.findById(request.getDepartmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
 
-        String rollNo = request.getRollNo();
-        if (rollNo == null || rollNo.isBlank()) {
-            if (request.getEmail() != null && request.getEmail().contains("@")) {
-                rollNo = request.getEmail().split("@")[0].toUpperCase();
-            }
+        if (request.getRollNo() == null || request.getRollNo().isBlank()) {
+            throw new BadRequestException("Roll number is required for registration.");
         }
+        String rollNo = request.getRollNo().trim().toUpperCase();
 
         User user = new User(
                 request.getEmail(),

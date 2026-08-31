@@ -21,31 +21,46 @@ public class ProjectFile {
     @Column(name = "file_type", nullable = false, length = 100)
     private String fileType;
 
-    @Column(name = "file_path", nullable = false, length = 500)
-    private String filePath;
-
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 
-    @Column(name = "uploaded_at", nullable = false, updatable = false)
-    private LocalDateTime uploadedAt;
+    @Column(name = "storage_path", nullable = false, length = 500)
+    private String storagePath;
+
+    @Column(name = "storage_type", nullable = false, length = 20)
+    private String storageType = "LOCAL";
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by_user_id", nullable = false)
+    private User uploadedBy;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     public ProjectFile() {
-        this.uploadedAt = LocalDateTime.now();
+        this.storageType = "LOCAL";
+        this.createdAt = LocalDateTime.now();
     }
 
-    public ProjectFile(Project project, String fileName, String fileType, String filePath, Long fileSize) {
+    public ProjectFile(Project project, String fileName, String fileType, String storagePath, Long fileSize, String storageType, User uploadedBy) {
         this.project = project;
         this.fileName = fileName;
         this.fileType = fileType;
-        this.filePath = filePath;
+        this.storagePath = storagePath;
         this.fileSize = fileSize;
-        this.uploadedAt = LocalDateTime.now();
+        this.storageType = storageType != null ? storageType : "LOCAL";
+        this.uploadedBy = uploadedBy;
+        this.createdAt = LocalDateTime.now();
     }
 
     @PrePersist
     protected void onCreate() {
-        this.uploadedAt = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        if (this.storageType == null) {
+            this.storageType = "LOCAL";
+        }
     }
 
     // Getters and Setters
@@ -81,14 +96,6 @@ public class ProjectFile {
         this.fileType = fileType;
     }
 
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
-
     public Long getFileSize() {
         return fileSize;
     }
@@ -97,11 +104,53 @@ public class ProjectFile {
         this.fileSize = fileSize;
     }
 
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public void setStoragePath(String storagePath) {
+        this.storagePath = storagePath;
+    }
+
+    // Alias for getFilePath
+    public String getFilePath() {
+        return storagePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.storagePath = filePath;
+    }
+
+    public String getStorageType() {
+        return storageType;
+    }
+
+    public void setStorageType(String storageType) {
+        this.storageType = storageType;
+    }
+
+    public User getUploadedBy() {
+        return uploadedBy;
+    }
+
+    public void setUploadedBy(User uploadedBy) {
+        this.uploadedBy = uploadedBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    // Alias for uploadedAt
     public LocalDateTime getUploadedAt() {
-        return uploadedAt;
+        return createdAt;
     }
 
     public void setUploadedAt(LocalDateTime uploadedAt) {
-        this.uploadedAt = uploadedAt;
+        this.createdAt = uploadedAt;
     }
 }

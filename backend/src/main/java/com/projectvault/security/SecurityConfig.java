@@ -67,7 +67,7 @@ public class SecurityConfig {
                 // Public Visitor Endpoints (No Auth Required)
                 .requestMatchers("/api/v1/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/projects", "/api/v1/projects/{id}", "/api/v1/projects/search", "/api/v1/projects/{id}/recommendations").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/projects", "/api/v1/projects/{id}", "/api/v1/projects/search", "/api/v1/projects/{id}/recommendations", "/api/v1/projects/*/files/*/download").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/departments/**").permitAll()
                 // All other requests require authentication
                 .anyRequest().authenticated()
