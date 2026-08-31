@@ -14,34 +14,40 @@ import {
   User as UserIcon, 
   Filter, 
   ChevronLeft, 
-  ChevronRight,
-  CheckCircle2,
-  Clock,
-  FileEdit,
-  ShieldCheck,
-  RefreshCw,
-  Send,
-  Eye,
-  FolderOpen,
-  Users
+  ChevronRight, 
+  CheckCircle2, 
+  Clock, 
+  FileEdit, 
+  ShieldCheck, 
+  RefreshCw, 
+  Send, 
+  Eye, 
+  FolderOpen, 
+  Users 
 } from 'lucide-react';
 
 export const UserDashboard: React.FC = () => {
   const { user, refreshProfile } = useAuth();
 
+  const isStudent = user?.role === 'STUDENT';
+  const isFaculty = user?.role === 'FACULTY';
+  const isAdmin = user?.role === 'ADMIN';
+
   // All projects fetched from server
   const [allProjects, setAllProjects] = useState<ProjectSummary[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
 
-  // Active Tab: 'my-projects' | 'catalog' | 'review'
-  const [activeTab, setActiveTab] = useState<'my-projects' | 'catalog' | 'review'>(
-    user?.role === 'FACULTY' ? 'review' : user?.role === 'ADMIN' ? 'catalog' : 'my-projects'
+  // Active Main Tab
+  const [activeTab, setActiveTab] = useState<'my-projects' | 'faculty-hub' | 'catalog' | 'review'>(
+    isFaculty ? 'faculty-hub' : isAdmin ? 'catalog' : 'my-projects'
   );
 
-  // Filter state for catalog tab
-  const [selectedDept, setSelectedDept] = useState<string>('');
+  // Status Sub-filter
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedDept, setSelectedDept] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  
+  // Pagination
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalElements, setTotalElements] = useState<number>(0);
@@ -50,33 +56,27 @@ export const UserDashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [systemUsers, setSystemUsers] = useState<any[]>([]);
 
+  // Initialize active tab on role load
   useEffect(() => {
-    fetchDepartments();
-    fetchProjects();
-    if (user?.role === 'ADMIN') {
-      fetchSystemUsers();
-    }
-    if (user?.role === 'FACULTY') {
-      setActiveTab('review');
-    } else if (user?.role === 'ADMIN') {
+    if (isFaculty) {
+      setActiveTab('faculty-hub');
+    } else if (isAdmin) {
       setActiveTab('catalog');
-    } else if (user?.role === 'STUDENT') {
+    } else {
       setActiveTab('my-projects');
     }
-  }, [page, selectedDept, selectedStatus, user?.id, user?.role]);
+  }, [user?.role]);
 
-  const fetchSystemUsers = async () => {
-    try {
-      const res = await api.get<ApiResponse<PageResponse<any>>>('/users?size=100');
-      if (res.data && res.data.data && res.data.data.content) {
-        setSystemUsers(res.data.data.content);
-      }
-    } catch (err) {
-      console.error('Failed to fetch system users:', err);
-    }
-  };
+  // Initial load
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  // Fetch projects when page, dept, status, or user changes
+  useEffect(() => {
+    fetchProjects();
+  }, [page, selectedDept, selectedStatus, user?.id]);
 
   const fetchDepartments = async () => {
     try {
@@ -116,20 +116,39 @@ export const UserDashboard: React.FC = () => {
     setIsRefreshing(false);
   };
 
-  const isStudent = user?.role === 'STUDENT';
-  const isFaculty = user?.role === 'FACULTY';
-  const isStaff = isFaculty || user?.role === 'ADMIN';
-  const isAdmin = user?.role === 'ADMIN';
+  // Filter projects by search term
+  const filterBySearch = (projectsList: ProjectSummary[]) => {
+    if (!searchTerm.trim()) return projectsList;
+    const term = searchTerm.toLowerCase().trim();
+    return projectsList.filter((p) => {
+      const title = (p.title || '').toLowerCase();
+      const abs = (p.abstractText || '').toLowerCase();
+      const authorName = (p.createdByUserName || p.createdByFullName || '').toLowerCase();
+      const rollNo = (p.createdByRollNo || '').toLowerCase();
+      const guide = (p.guideFacultyName || '').toLowerCase();
+      return (
+        title.includes(term) ||
+        abs.includes(term) ||
+        authorName.includes(term) ||
+        rollNo.includes(term) ||
+        guide.includes(term)
+      );
+    });
+  };
 
-  // Filter projects created by current user
-  const myProjects = allProjects.filter(p => user && p.createdByUserId === user.id);
+  // 1. Projects for Student (Created by or Member of)
+  const studentProjects = allProjects.filter(p => user && p.createdByUserId === user.id);
+  const filteredStudentProjects = filterBySearch(studentProjects);
 
-  // Stats calculation for current user
-  const myApprovedCount = myProjects.filter(p => p.status === 'APPROVED').length;
-  const myPendingCount = myProjects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW').length;
-  const myDraftCount = myProjects.filter(p => p.status === 'DRAFT').length;
+  // 2. Projects for Faculty (Guided by faculty or created by faculty, excluding unsubmitted student drafts)
+  const facultyGuidedProjects = allProjects.filter(p => {
+    if (!user) return false;
+    if (p.createdByUserId === user.id) return true;
+    return p.guideFacultyId === user.id && p.status !== 'DRAFT';
+  });
+  const filteredFacultyProjects = filterBySearch(facultyGuidedProjects);
 
-  // Projects pending review for faculty/admin (filtered by designated guide for faculty)
+  // 3. Projects for Review (Submitted & Under Review)
   const pendingReviewProjects = allProjects.filter(p => {
     const isPending = p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW';
     if (!isPending) return false;
@@ -139,24 +158,23 @@ export const UserDashboard: React.FC = () => {
     }
     return false;
   });
+  const filteredReviewProjects = filterBySearch(pendingReviewProjects);
 
-  // Filtered view for catalog
-  const filteredCatalogProjects = allProjects.filter((p) => {
-    // Hide non-approved projects of other peers/students in catalog unless owned or guided by faculty
-    if (!isAdmin && p.status !== 'APPROVED') {
-      const isMine = user && p.createdByUserId === user.id;
-      const isMyGuided = isFaculty && user && p.guideFacultyId === user.id;
-      if (!isMine && !isMyGuided) return false;
-    }
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    const author = p.createdByUserName || p.createdByFullName || '';
-    return (
-      p.title.toLowerCase().includes(term) ||
-      (p.abstractText || '').toLowerCase().includes(term) ||
-      author.toLowerCase().includes(term)
-    );
-  });
+  // 4. Catalog Projects (Admin or Public View)
+  const filteredCatalogProjects = filterBySearch(allProjects);
+
+  // Counts for Student View
+  const studentTotalCount = studentProjects.length;
+  const studentApprovedCount = studentProjects.filter(p => p.status === 'APPROVED').length;
+  const studentPendingCount = studentProjects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW').length;
+  const studentDraftCount = studentProjects.filter(p => p.status === 'DRAFT').length;
+
+  // Counts for Faculty View (Based on their guided submissions, excluding student drafts)
+  const facultyTotalCount = facultyGuidedProjects.length;
+  const facultySubmittedCount = facultyGuidedProjects.filter(p => p.status === 'SUBMITTED').length;
+  const facultyUnderReviewCount = facultyGuidedProjects.filter(p => p.status === 'UNDER_REVIEW').length;
+  const facultyApprovedCount = facultyGuidedProjects.filter(p => p.status === 'APPROVED').length;
+  const facultyRejectedCount = facultyGuidedProjects.filter(p => p.status === 'REJECTED').length;
 
   const getStatusBadge = (status: ProjectStatus) => {
     const styles: Record<ProjectStatus, string> = {
@@ -188,12 +206,6 @@ export const UserDashboard: React.FC = () => {
       setSelectedProjectId(proj.id);
     }
   };
-
-  // Role-aware Stats calculation for top cards
-  const totalSubmissionsCount = isStaff ? (totalElements || allProjects.length) : myProjects.length;
-  const approvedCount = isStaff ? allProjects.filter(p => p.status === 'APPROVED').length : myApprovedCount;
-  const pendingReviewCount = isStaff ? allProjects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW').length : myPendingCount;
-  const draftCount = isStaff ? allProjects.filter(p => p.status === 'DRAFT').length : myDraftCount;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -228,11 +240,11 @@ export const UserDashboard: React.FC = () => {
             <p className="text-indigo-100 text-sm sm:text-base leading-relaxed">
               {isAdmin
                 ? 'System Administrator Control Center. Manage students, staff, department data, and oversee all project submissions.'
-                : user?.role === 'FACULTY'
-                ? `Faculty Evaluator Hub. Review student capstones, evaluate submissions, and guide department research.`
+                : isFaculty
+                ? `Faculty Evaluator Hub. Track all assigned student teams, evaluate pending submissions, and review project lifecycles.`
                 : user?.departmentName
-                ? `Affiliation: ${user.departmentName}`
-                : 'Manage your research submissions, project drafts, and department repositories.'}
+                ? `Student Research Workspace — ${user.departmentName}`
+                : 'Manage your research submissions, project drafts, and capstone progress.'}
             </p>
           </div>
 
@@ -270,38 +282,35 @@ export const UserDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* User Usage & Statistics Cards - ONLY FOR STUDENTS */}
+      {/* 1. STUDENT STATISTICS CARDS */}
       {isStudent && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Total Submissions */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Submissions</span>
-              <div className="text-2xl font-extrabold text-slate-900">{totalSubmissionsCount}</div>
-              <span className="text-xs text-slate-500 font-medium">Created by you</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">My Submissions</span>
+              <div className="text-2xl font-extrabold text-slate-900">{studentTotalCount}</div>
+              <span className="text-xs text-slate-500 font-medium">Total projects created</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
               <FolderOpen className="w-6 h-6" />
             </div>
           </div>
 
-          {/* Approved Submissions */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Approved Projects</span>
-              <div className="text-2xl font-extrabold text-emerald-700">{approvedCount}</div>
-              <span className="text-xs text-slate-500 font-medium">Publicly published</span>
+              <div className="text-2xl font-extrabold text-emerald-700">{studentApprovedCount}</div>
+              <span className="text-xs text-slate-500 font-medium">Published in catalog</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
               <CheckCircle2 className="w-6 h-6" />
             </div>
           </div>
 
-          {/* Pending Review */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Under Review</span>
-              <div className="text-2xl font-extrabold text-sky-700">{pendingReviewCount}</div>
+              <div className="text-2xl font-extrabold text-sky-700">{studentPendingCount}</div>
               <span className="text-xs text-slate-500 font-medium">Awaiting evaluation</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
@@ -309,11 +318,10 @@ export const UserDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Draft Entries */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Draft Entries</span>
-              <div className="text-2xl font-extrabold text-amber-700">{draftCount}</div>
+              <div className="text-2xl font-extrabold text-amber-700">{studentDraftCount}</div>
               <span className="text-xs text-slate-500 font-medium">In preparation</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
@@ -323,139 +331,200 @@ export const UserDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Main Navigation Tabs */}
-      <div className="border-b border-slate-200 flex items-center justify-between">
-        <div className="flex space-x-2">
-          {isStudent && (
-            <button
-              onClick={() => setActiveTab('my-projects')}
-              className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
-                activeTab === 'my-projects'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <UserIcon className="w-4 h-4" />
-              <span>My Projects & Usage ({myProjects.length})</span>
-            </button>
-          )}
-
-          {isStaff && (
-            <button
-              onClick={() => setActiveTab('review')}
-              className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
-                activeTab === 'review'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Projects Under Review ({pendingReviewProjects.length})</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
-              activeTab === 'catalog'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+      {/* 2. FACULTY STATISTICS CARDS */}
+      {isFaculty && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div 
+            onClick={() => { setSelectedStatus(''); setPage(0); }}
+            className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer shadow-sm hover:-translate-y-0.5 ${
+              selectedStatus === '' ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'
             }`}
           >
-            <FolderGit2 className="w-4 h-4" />
-            <span>All Repository Catalog</span>
-          </button>
-        </div>
-      </div>
-
-      {/* TAB CONTENT 1: MY PROJECTS & PERSONAL USAGE (STUDENT ONLY) */}
-      {activeTab === 'my-projects' && isStudent && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">
-              {isAdmin ? 'System Project Submissions' : 'Your Project Submissions'}
-            </h2>
-            {!isAdmin && (
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition-colors shadow-sm"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Create Project Draft</span>
-              </button>
-            )}
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">All Submissions</span>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1">{facultyTotalCount}</div>
+            <span className="text-[10px] text-slate-400 font-medium">Guided Projects</span>
           </div>
 
+          <div 
+            onClick={() => { setSelectedStatus('SUBMITTED'); setPage(0); }}
+            className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer shadow-sm hover:-translate-y-0.5 ${
+              selectedStatus === 'SUBMITTED' ? 'border-sky-500 ring-2 ring-sky-500/20' : 'border-slate-200'
+            }`}
+          >
+            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-600">Submitted</span>
+            <div className="text-2xl font-extrabold text-sky-700 mt-1">{facultySubmittedCount}</div>
+            <span className="text-[10px] text-sky-500 font-medium">Awaiting Review</span>
+          </div>
+
+          <div 
+            onClick={() => { setSelectedStatus('UNDER_REVIEW'); setPage(0); }}
+            className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer shadow-sm hover:-translate-y-0.5 ${
+              selectedStatus === 'UNDER_REVIEW' ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'
+            }`}
+          >
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Under Review</span>
+            <div className="text-2xl font-extrabold text-indigo-700 mt-1">{facultyUnderReviewCount}</div>
+            <span className="text-[10px] text-indigo-500 font-medium">In Evaluation</span>
+          </div>
+
+          <div 
+            onClick={() => { setSelectedStatus('APPROVED'); setPage(0); }}
+            className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer shadow-sm hover:-translate-y-0.5 ${
+              selectedStatus === 'APPROVED' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-200'
+            }`}
+          >
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Approved</span>
+            <div className="text-2xl font-extrabold text-emerald-700 mt-1">{facultyApprovedCount}</div>
+            <span className="text-[10px] text-emerald-500 font-medium">Published</span>
+          </div>
+
+          <div 
+            onClick={() => { setSelectedStatus('REJECTED'); setPage(0); }}
+            className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer shadow-sm hover:-translate-y-0.5 ${
+              selectedStatus === 'REJECTED' ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-200'
+            }`}
+          >
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600">Rejected</span>
+            <div className="text-2xl font-extrabold text-rose-700 mt-1">{facultyRejectedCount}</div>
+            <span className="text-[10px] text-rose-500 font-medium">With Feedback</span>
+          </div>
+        </div>
+      )}
+
+      {/* Main Navigation Tabs (Only for Staff / Admin) */}
+      {!isStudent && (
+        <div className="border-b border-slate-200 flex items-center justify-between">
+          <div className="flex space-x-2">
+            {isFaculty && (
+              <button
+                onClick={() => setActiveTab('faculty-hub')}
+                className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
+                  activeTab === 'faculty-hub'
+                    ? 'border-indigo-600 text-indigo-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Student Submissions & Evaluation Hub ({facultyGuidedProjects.length})</span>
+              </button>
+            )}
+
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setActiveTab('catalog')}
+                  className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
+                    activeTab === 'catalog'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <FolderGit2 className="w-4 h-4" />
+                  <span>All Repository Catalog</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('review')}
+                  className={`flex items-center space-x-2 py-3 px-4 text-sm font-bold border-b-2 transition-all ${
+                    activeTab === 'review'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Projects Under Review ({pendingReviewProjects.length})</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 1. STUDENT VIEW: MY PROJECTS & USAGE ONLY                                */}
+      {/* ========================================================================= */}
+      {isStudent && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Your Project Submissions</h2>
+              <p className="text-xs text-slate-500">Track and manage your capstone drafts and evaluation status.</p>
+            </div>
+
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create Project Draft</span>
+            </button>
+          </div>
+
+          {/* Search & Status Filters for Student */}
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search your projects by title or keywords..."
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+              {[
+                { label: 'All Projects', value: '' },
+                { label: 'Approved', value: 'APPROVED' },
+                { label: 'Drafts', value: 'DRAFT' },
+                { label: 'Submitted', value: 'SUBMITTED' },
+                { label: 'Under Review', value: 'UNDER_REVIEW' },
+                { label: 'Rejected', value: 'REJECTED' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => {
+                    setSelectedStatus(tab.value);
+                    setPage(0);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                    selectedStatus === tab.value
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Projects Grid */}
           {isLoading ? (
             <div className="py-12 text-center text-slate-400 font-medium">Loading your projects...</div>
-          ) : myProjects.length === 0 ? (
+          ) : filteredStudentProjects.length === 0 ? (
             <div className="py-12 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-4">
               <FolderGit2 className="w-12 h-12 text-indigo-200 mx-auto" />
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-800">
-                  {isAdmin ? 'Admin Management Center Active' : 'No Projects Created Yet'}
-                </h3>
+                <h3 className="text-lg font-bold text-slate-800">No Projects Found</h3>
                 <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  {isAdmin
-                    ? 'You are logged in as System Administrator. Use the tabs above to manage users, evaluate pending project submissions, or view all repository catalog entries.'
-                    : 'You have not created any academic project drafts. Click below to submit your capstone or research paper.'}
+                  {selectedStatus
+                    ? `No projects found with status '${selectedStatus.replace('_', ' ')}'.`
+                    : 'You have not created any academic project drafts. Click below to submit your capstone.'}
                 </p>
               </div>
-              {!isAdmin && (
-                <button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Create Your First Project</span>
-                </button>
-              )}
-
-              {isAdmin && systemUsers.length > 0 && (
-                <div className="text-left space-y-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Official System Accounts Roster ({systemUsers.length} Users)</h4>
-                    <Link to="/users" className="text-xs font-bold text-indigo-600 hover:underline">Manage All Accounts &rarr;</Link>
-                  </div>
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/50">
-                    <table className="w-full text-xs text-slate-700">
-                      <thead className="bg-slate-100/80 text-slate-500 font-bold uppercase tracking-wider">
-                        <tr>
-                          <th className="p-2.5 text-left">Email Address</th>
-                          <th className="p-2.5 text-left">Full Name</th>
-                          <th className="p-2.5 text-left">Roll No</th>
-                          <th className="p-2.5 text-left">Role</th>
-                          <th className="p-2.5 text-left">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 font-medium">
-                        {systemUsers.map((u) => (
-                          <tr key={u.id} className="hover:bg-white transition-colors">
-                            <td className="p-2.5 font-bold text-slate-900">{u.email}</td>
-                            <td className="p-2.5 font-medium">{formatUserNameByRole(u.name, u.role)}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{u.rollNo || '—'}</td>
-                            <td className="p-2.5">
-                              <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
-                                u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
-                                u.role === 'FACULTY' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
-                              }`}>
-                                {u.role}
-                              </span>
-                            </td>
-                            <td className="p-2.5">
-                              <span className="text-emerald-600 font-semibold">{u.userStatus || 'ACTIVE'}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Your First Project</span>
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myProjects.map((project) => (
+              {filteredStudentProjects.map((project) => (
                 <div
                   key={project.id}
                   onClick={() => setSelectedProjectId(project.id)}
@@ -464,7 +533,7 @@ export const UserDashboard: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md">
-                        {project.departmentName}
+                        {project.departmentName || 'MCA'}
                       </span>
                       {getStatusBadge(project.status)}
                     </div>
@@ -513,13 +582,146 @@ export const UserDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* TAB CONTENT 2: GLOBAL REPOSITORY CATALOG */}
-      {activeTab === 'catalog' && (
+      {/* ========================================================================= */}
+      {/* 2. FACULTY VIEW: STUDENT SUBMISSIONS & EVALUATION HUB                    */}
+      {/* ========================================================================= */}
+      {isFaculty && (
+        <div className="space-y-6">
+          {/* Search and Status Filters */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by student name, roll number, project title, or abstract..."
+                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Status Tabs with Live Badges */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 border-t border-slate-100 pt-3">
+              {[
+                { label: 'All Submissions', value: '', count: facultyTotalCount },
+                { label: 'Submitted (Awaiting Review)', value: 'SUBMITTED', count: facultySubmittedCount },
+                { label: 'Under Review', value: 'UNDER_REVIEW', count: facultyUnderReviewCount },
+                { label: 'Approved', value: 'APPROVED', count: facultyApprovedCount },
+                { label: 'Rejected', value: 'REJECTED', count: facultyRejectedCount },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => {
+                    setSelectedStatus(tab.value);
+                    setPage(0);
+                  }}
+                  className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    selectedStatus === tab.value
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 bg-slate-50 border border-slate-200/60'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                    selectedStatus === tab.value
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Faculty Guided Projects Grid */}
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 font-medium">Loading guided student submissions...</div>
+          ) : filteredFacultyProjects.length === 0 ? (
+            <div className="py-12 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
+              <FolderGit2 className="w-12 h-12 text-slate-300 mx-auto" />
+              <h3 className="text-lg font-bold text-slate-800">No Student Submissions Found</h3>
+              <p className="text-sm text-slate-500 max-w-md mx-auto">
+                {selectedStatus
+                  ? `No submissions found for your guided teams with status '${selectedStatus.replace('_', ' ')}'.`
+                  : 'There are currently no student projects assigned to you for faculty guidance.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredFacultyProjects.map((project) => (
+                <div
+                  key={project.id}
+                  onClick={() => setSelectedProjectId(project.id)}
+                  className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl transition-all duration-200 flex flex-col justify-between cursor-pointer space-y-4 group hover:border-indigo-300"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md">
+                        {project.departmentName || 'MCA'}
+                      </span>
+                      {getStatusBadge(project.status)}
+                    </div>
+
+                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      {project.title}
+                    </h3>
+
+                    <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed">
+                      {project.abstractText}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="space-y-1">
+                      <div className="font-semibold text-slate-700 flex items-center gap-1.5">
+                        <UserIcon className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Author: {project.createdByUserName || 'Student'}</span>
+                        {project.createdByRollNo && (
+                          <span className="text-[11px] font-mono px-1.5 py-0.2 bg-slate-100 text-slate-600 border border-slate-200 rounded">
+                            {project.createdByRollNo}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded">
+                          Student
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-1.5 text-slate-500 font-medium">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span>AY {project.academicYear} (Semester {project.semester})</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProjectId(project.id);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      {project.status === 'SUBMITTED' || project.status === 'UNDER_REVIEW'
+                        ? 'Evaluate Submission'
+                        : 'View Details'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. ADMIN VIEW: GLOBAL REPOSITORY CATALOG & SYSTEM REVIEWS                 */}
+      {/* ========================================================================= */}
+      {isAdmin && activeTab === 'catalog' && (
         <div className="space-y-6">
           {/* Search and Filters */}
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              {/* Search bar */}
               <div className="relative flex-1">
                 <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                 <input
@@ -531,7 +733,6 @@ export const UserDashboard: React.FC = () => {
                 />
               </div>
 
-              {/* Department Dropdown */}
               <div className="flex items-center space-x-2">
                 <Filter className="w-4 h-4 text-slate-400 shrink-0" />
                 <select
@@ -553,7 +754,7 @@ export const UserDashboard: React.FC = () => {
             </div>
 
             {/* Status Filter Buttons */}
-            <div className="flex items-center space-x-1 overflow-x-auto pb-1 border-t border-slate-100 pt-3">
+            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 border-t border-slate-100 pt-3">
               {[
                 { label: 'All Projects', value: '' },
                 { label: 'Approved', value: 'APPROVED' },
@@ -568,7 +769,7 @@ export const UserDashboard: React.FC = () => {
                     setSelectedStatus(tab.value);
                     setPage(0);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                     selectedStatus === tab.value
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-600 hover:bg-slate-100'
@@ -623,9 +824,6 @@ export const UserDashboard: React.FC = () => {
                           {project.createdByRollNo}
                         </span>
                       )}
-                      <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded">
-                        Student
-                      </span>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -664,28 +862,28 @@ export const UserDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* TAB CONTENT 3: FACULTY / ADMIN REVIEW PANEL */}
-      {activeTab === 'review' && isStaff && (
+      {/* 4. ADMIN REVIEW PANEL */}
+      {isAdmin && activeTab === 'review' && (
         <div className="space-y-6">
           <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 flex items-start space-x-3">
             <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-indigo-900">Faculty Review Center</h3>
+              <h3 className="text-sm font-bold text-indigo-900">Administrator Evaluation & Review Center</h3>
               <p className="text-xs text-indigo-700 leading-relaxed">
-                Review pending project submissions across academic departments. Evaluate project abstracts, check repository links, and transition status to Approved or Rejected.
+                Review and evaluate pending project submissions across all academic departments.
               </p>
             </div>
           </div>
 
-          {pendingReviewProjects.length === 0 ? (
+          {filteredReviewProjects.length === 0 ? (
             <div className="py-12 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
               <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
               <h3 className="text-lg font-bold text-slate-800">All Clear! No Pending Reviews</h3>
-              <p className="text-sm text-slate-500">There are currently no projects awaiting faculty review or evaluation.</p>
+              <p className="text-sm text-slate-500">There are currently no projects awaiting evaluation.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {pendingReviewProjects.map((project) => (
+              {filteredReviewProjects.map((project) => (
                 <div
                   key={project.id}
                   onClick={() => setSelectedProjectId(project.id)}
@@ -711,15 +909,9 @@ export const UserDashboard: React.FC = () => {
                             {project.createdByRollNo}
                           </span>
                         )}
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded">
-                          Student
-                        </span>
                       </div>
                       <div className="text-emerald-700 font-bold flex items-center gap-1.5">
                         <span>Guide: {formatFacultyName(project.guideFacultyName)}</span>
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">
-                          Faculty Guide
-                        </span>
                       </div>
                     </div>
                     <button

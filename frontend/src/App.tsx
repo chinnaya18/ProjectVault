@@ -22,7 +22,7 @@ export default function App() {
             </Routes>
           </main>
           <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-            ProjectVault &copy; {new Date().getFullYear()} Academic Repository System — Powered by Spring Boot & React
+            ProjectVault &copy; {new Date().getFullYear()} Academic Repository System — by Bala & Chinna
           </footer>
         </div>
       </AuthProvider>

@@ -22,16 +22,14 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     Page<Project> findVisitorProjects(@Param("departmentId") Long departmentId, Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM Project p WHERE " +
-           "((p.status = com.projectvault.entity.ProjectStatus.APPROVED AND p.visibility = com.projectvault.entity.ProjectVisibility.PUBLIC) " +
-           " OR p.createdBy.id = :studentId " +
+           "(p.createdBy.id = :studentId " +
            " OR EXISTS (SELECT m FROM ProjectMember m WHERE m.project = p AND m.user.id = :studentId)) " +
            "AND (:departmentId IS NULL OR p.department.id = :departmentId) " +
            "AND (:status IS NULL OR p.status = :status)")
     Page<Project> findStudentProjects(@Param("studentId") Long studentId, @Param("departmentId") Long departmentId, @Param("status") ProjectStatus status, Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM Project p WHERE " +
-           "((p.status = com.projectvault.entity.ProjectStatus.APPROVED AND p.visibility = com.projectvault.entity.ProjectVisibility.PUBLIC) " +
-           " OR (p.guideFaculty IS NOT NULL AND p.guideFaculty.id = :facultyId) " +
+           "((p.guideFaculty IS NOT NULL AND p.guideFaculty.id = :facultyId AND p.status != com.projectvault.entity.ProjectStatus.DRAFT) " +
            " OR p.createdBy.id = :facultyId) " +
            "AND (:departmentId IS NULL OR p.department.id = :departmentId) " +
            "AND (:status IS NULL OR p.status = :status)")
