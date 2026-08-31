@@ -178,11 +178,20 @@ public class ProjectServiceImpl implements ProjectService {
 
         if (request.getMembers() != null) {
             for (ProjectMemberRequest mr : request.getMembers()) {
-                if (!mr.getUserId().equals(creator.getId())) {
-                    User memberUser = userRepository.findById(mr.getUserId())
-                            .orElseThrow(() -> new ResourceNotFoundException("User", "id", mr.getUserId()));
-                    ProjectMember member = new ProjectMember(savedProject, memberUser, mr.getMemberRole());
-                    members.add(projectMemberRepository.save(member));
+                User memberUser = null;
+                if (mr.getUserId() != null && mr.getUserId() > 0 && !mr.getUserId().equals(creator.getId())) {
+                    memberUser = userRepository.findById(mr.getUserId()).orElse(null);
+                }
+                if (memberUser == null && mr.getEmail() != null && !mr.getEmail().trim().isEmpty() && !mr.getEmail().equalsIgnoreCase(creator.getEmail())) {
+                    memberUser = userRepository.findByEmail(mr.getEmail().trim()).orElse(null);
+                }
+                if (memberUser != null && !memberUser.getId().equals(creator.getId())) {
+                    final Long uid = memberUser.getId();
+                    if (members.stream().noneMatch(m -> m.getUser() != null && m.getUser().getId().equals(uid))) {
+                        String role = (mr.getMemberRole() != null && !mr.getMemberRole().isBlank()) ? mr.getMemberRole() : "Team Member";
+                        ProjectMember member = new ProjectMember(savedProject, memberUser, role);
+                        members.add(projectMemberRepository.save(member));
+                    }
                 }
             }
         }

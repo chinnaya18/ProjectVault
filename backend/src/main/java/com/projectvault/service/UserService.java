@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface UserService {
     PageResponse<UserSummaryDto> getAllUsers(Long departmentId, Role role, UserStatus userStatus, Pageable pageable);
+    java.util.List<UserSummaryDto> getFacultyMembers();
+    java.util.List<UserSummaryDto> getStudents();
     UserSummaryDto getUserById(Long id);
     UserSummaryDto updateUserRole(Long id, UpdateUserRoleRequest request);
     UserSummaryDto updateUserStatus(Long id, UpdateUserStatusRequest request);

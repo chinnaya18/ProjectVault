@@ -1,14 +1,11 @@
 package com.projectvault.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-
 public class ProjectMemberRequest {
 
-    @NotNull(message = "User ID is required")
     private Long userId;
 
-    @NotBlank(message = "Member role is required")
+    private String email;
+
     private String memberRole;
 
     public ProjectMemberRequest() {}
@@ -18,12 +15,26 @@ public class ProjectMemberRequest {
         this.memberRole = memberRole;
     }
 
+    public ProjectMemberRequest(Long userId, String email, String memberRole) {
+        this.userId = userId;
+        this.email = email;
+        this.memberRole = memberRole;
+    }
+
     public Long getUserId() {
         return userId;
     }
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getMemberRole() {

@@ -47,6 +47,22 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.List<UserSummaryDto> getFacultyMembers() {
+        return userRepository.findByRoleAndIsActiveTrue(Role.FACULTY).stream()
+                .map(userMapper::toUserSummaryDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<UserSummaryDto> getStudents() {
+        return userRepository.findByRoleAndIsActiveTrue(Role.STUDENT).stream()
+                .map(userMapper::toUserSummaryDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public UserSummaryDto getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));

@@ -32,7 +32,7 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY', 'STUDENT')")
     @Operation(summary = "List Users", description = "Returns a paginated list of system users. Filterable by departmentId, role, or userStatus.")
     public ResponseEntity<ApiResponse<PageResponse<UserSummaryDto>>> getAllUsers(
             @RequestParam(required = false) Long departmentId,
@@ -47,6 +47,22 @@ public class UserController {
         Pageable pageable = PageRequest.of(page, size, sort);
         PageResponse<UserSummaryDto> response = userService.getAllUsers(departmentId, role, userStatus, pageable);
         return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response));
+    }
+
+    @GetMapping("/faculty")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY', 'STUDENT')")
+    @Operation(summary = "List Faculty Guides", description = "Returns a list of all active faculty members for project guide assignment.")
+    public ResponseEntity<ApiResponse<java.util.List<UserSummaryDto>>> getFacultyGuides() {
+        java.util.List<UserSummaryDto> faculty = userService.getFacultyMembers();
+        return ResponseEntity.ok(ApiResponse.success("Faculty guides retrieved successfully", faculty));
+    }
+
+    @GetMapping("/students")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY', 'STUDENT')")
+    @Operation(summary = "List Registered Students", description = "Returns a list of all active student accounts for team formation.")
+    public ResponseEntity<ApiResponse<java.util.List<UserSummaryDto>>> getStudents() {
+        java.util.List<UserSummaryDto> students = userService.getStudents();
+        return ResponseEntity.ok(ApiResponse.success("Students retrieved successfully", students));
     }
 
     @GetMapping("/{id}")

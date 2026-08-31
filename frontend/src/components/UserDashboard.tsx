@@ -73,10 +73,10 @@ export const UserDashboard: React.FC = () => {
     fetchDepartments();
   }, []);
 
-  // Fetch projects when page, dept, status, or user changes
+  // Fetch projects when dept or user changes
   useEffect(() => {
     fetchProjects();
-  }, [page, selectedDept, selectedStatus, user?.id]);
+  }, [selectedDept, user?.id]);
 
   const fetchDepartments = async () => {
     try {
@@ -92,9 +92,8 @@ export const UserDashboard: React.FC = () => {
   const fetchProjects = async () => {
     setIsLoading(true);
     try {
-      let url = `/projects?page=${page}&size=50`;
+      let url = `/projects?page=0&size=200`;
       if (selectedDept) url += `&departmentId=${selectedDept}`;
-      if (selectedStatus) url += `&status=${selectedStatus}`;
 
       const res = await api.get<ApiResponse<PageResponse<ProjectSummary>>>(url);
       if (res.data && res.data.data) {
@@ -137,16 +136,33 @@ export const UserDashboard: React.FC = () => {
   };
 
   // 1. Projects for Student (Created by or Member of)
-  const studentProjects = allProjects.filter(p => user && p.createdByUserId === user.id);
-  const filteredStudentProjects = filterBySearch(studentProjects);
+  const studentBaseProjects = allProjects.filter(p => user && p.createdByUserId === user.id);
+  const studentTotalCount = studentBaseProjects.length;
+  const studentApprovedCount = studentBaseProjects.filter(p => p.status === 'APPROVED').length;
+  const studentDraftCount = studentBaseProjects.filter(p => p.status === 'DRAFT').length;
+  const studentSubmittedCount = studentBaseProjects.filter(p => p.status === 'SUBMITTED').length;
+  const studentUnderReviewCount = studentBaseProjects.filter(p => p.status === 'UNDER_REVIEW').length;
+  const studentRejectedCount = studentBaseProjects.filter(p => p.status === 'REJECTED').length;
+
+  const filteredStudentProjects = filterBySearch(
+    selectedStatus ? studentBaseProjects.filter(p => p.status === selectedStatus) : studentBaseProjects
+  );
 
   // 2. Projects for Faculty (Guided by faculty or created by faculty, excluding unsubmitted student drafts)
-  const facultyGuidedProjects = allProjects.filter(p => {
+  const facultyBaseProjects = allProjects.filter(p => {
     if (!user) return false;
     if (p.createdByUserId === user.id) return true;
     return p.guideFacultyId === user.id && p.status !== 'DRAFT';
   });
-  const filteredFacultyProjects = filterBySearch(facultyGuidedProjects);
+  const facultyTotalCount = facultyBaseProjects.length;
+  const facultySubmittedCount = facultyBaseProjects.filter(p => p.status === 'SUBMITTED').length;
+  const facultyUnderReviewCount = facultyBaseProjects.filter(p => p.status === 'UNDER_REVIEW').length;
+  const facultyApprovedCount = facultyBaseProjects.filter(p => p.status === 'APPROVED').length;
+  const facultyRejectedCount = facultyBaseProjects.filter(p => p.status === 'REJECTED').length;
+
+  const filteredFacultyProjects = filterBySearch(
+    selectedStatus ? facultyBaseProjects.filter(p => p.status === selectedStatus) : facultyBaseProjects
+  );
 
   // 3. Projects for Review (Submitted & Under Review)
   const pendingReviewProjects = allProjects.filter(p => {
@@ -158,23 +174,21 @@ export const UserDashboard: React.FC = () => {
     }
     return false;
   });
-  const filteredReviewProjects = filterBySearch(pendingReviewProjects);
+  const filteredReviewProjects = filterBySearch(
+    selectedStatus ? pendingReviewProjects.filter(p => p.status === selectedStatus) : pendingReviewProjects
+  );
 
   // 4. Catalog Projects (Admin or Public View)
-  const filteredCatalogProjects = filterBySearch(allProjects);
+  const catalogTotalCount = allProjects.length;
+  const catalogApprovedCount = allProjects.filter(p => p.status === 'APPROVED').length;
+  const catalogDraftCount = allProjects.filter(p => p.status === 'DRAFT').length;
+  const catalogSubmittedCount = allProjects.filter(p => p.status === 'SUBMITTED').length;
+  const catalogUnderReviewCount = allProjects.filter(p => p.status === 'UNDER_REVIEW').length;
+  const catalogRejectedCount = allProjects.filter(p => p.status === 'REJECTED').length;
 
-  // Counts for Student View
-  const studentTotalCount = studentProjects.length;
-  const studentApprovedCount = studentProjects.filter(p => p.status === 'APPROVED').length;
-  const studentPendingCount = studentProjects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW').length;
-  const studentDraftCount = studentProjects.filter(p => p.status === 'DRAFT').length;
-
-  // Counts for Faculty View (Based on their guided submissions, excluding student drafts)
-  const facultyTotalCount = facultyGuidedProjects.length;
-  const facultySubmittedCount = facultyGuidedProjects.filter(p => p.status === 'SUBMITTED').length;
-  const facultyUnderReviewCount = facultyGuidedProjects.filter(p => p.status === 'UNDER_REVIEW').length;
-  const facultyApprovedCount = facultyGuidedProjects.filter(p => p.status === 'APPROVED').length;
-  const facultyRejectedCount = facultyGuidedProjects.filter(p => p.status === 'REJECTED').length;
+  const filteredCatalogProjects = filterBySearch(
+    selectedStatus ? allProjects.filter(p => p.status === selectedStatus) : allProjects
+  );
 
   const getStatusBadge = (status: ProjectStatus) => {
     const styles: Record<ProjectStatus, string> = {
@@ -285,7 +299,12 @@ export const UserDashboard: React.FC = () => {
       {/* 1. STUDENT STATISTICS CARDS */}
       {isStudent && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+          <div 
+            onClick={() => setSelectedStatus('')}
+            className={`bg-white rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all hover:-translate-y-0.5 ${
+              selectedStatus === '' ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'
+            }`}
+          >
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">My Submissions</span>
               <div className="text-2xl font-extrabold text-slate-900">{studentTotalCount}</div>
@@ -296,7 +315,12 @@ export const UserDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+          <div 
+            onClick={() => setSelectedStatus('APPROVED')}
+            className={`bg-white rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all hover:-translate-y-0.5 ${
+              selectedStatus === 'APPROVED' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-200'
+            }`}
+          >
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Approved Projects</span>
               <div className="text-2xl font-extrabold text-emerald-700">{studentApprovedCount}</div>
@@ -307,10 +331,15 @@ export const UserDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+          <div 
+            onClick={() => setSelectedStatus('UNDER_REVIEW')}
+            className={`bg-white rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all hover:-translate-y-0.5 ${
+              selectedStatus === 'UNDER_REVIEW' ? 'border-sky-500 ring-2 ring-sky-500/20' : 'border-slate-200'
+            }`}
+          >
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Under Review</span>
-              <div className="text-2xl font-extrabold text-sky-700">{studentPendingCount}</div>
+              <div className="text-2xl font-extrabold text-sky-700">{studentUnderReviewCount}</div>
               <span className="text-xs text-slate-500 font-medium">Awaiting evaluation</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
@@ -318,7 +347,12 @@ export const UserDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+          <div 
+            onClick={() => setSelectedStatus('DRAFT')}
+            className={`bg-white rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all hover:-translate-y-0.5 ${
+              selectedStatus === 'DRAFT' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-slate-200'
+            }`}
+          >
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Draft Entries</span>
               <div className="text-2xl font-extrabold text-amber-700">{studentDraftCount}</div>
@@ -405,7 +439,7 @@ export const UserDashboard: React.FC = () => {
                 }`}
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>Student Submissions & Evaluation Hub ({facultyGuidedProjects.length})</span>
+                <span>Student Submissions & Evaluation Hub ({facultyBaseProjects.length})</span>
               </button>
             )}
 
@@ -475,12 +509,12 @@ export const UserDashboard: React.FC = () => {
 
             <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
               {[
-                { label: 'All Projects', value: '' },
-                { label: 'Approved', value: 'APPROVED' },
-                { label: 'Drafts', value: 'DRAFT' },
-                { label: 'Submitted', value: 'SUBMITTED' },
-                { label: 'Under Review', value: 'UNDER_REVIEW' },
-                { label: 'Rejected', value: 'REJECTED' },
+                { label: 'All Projects', value: '', count: studentTotalCount },
+                { label: 'Approved', value: 'APPROVED', count: studentApprovedCount },
+                { label: 'Drafts', value: 'DRAFT', count: studentDraftCount },
+                { label: 'Submitted', value: 'SUBMITTED', count: studentSubmittedCount },
+                { label: 'Under Review', value: 'UNDER_REVIEW', count: studentUnderReviewCount },
+                { label: 'Rejected', value: 'REJECTED', count: studentRejectedCount },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -488,13 +522,20 @@ export const UserDashboard: React.FC = () => {
                     setSelectedStatus(tab.value);
                     setPage(0);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                     selectedStatus === tab.value
                       ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      : 'text-slate-600 hover:bg-slate-100 bg-slate-50 border border-slate-200/60'
                   }`}
                 >
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                    selectedStatus === tab.value
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {tab.count}
+                  </span>
                 </button>
               ))}
             </div>
@@ -756,12 +797,12 @@ export const UserDashboard: React.FC = () => {
             {/* Status Filter Buttons */}
             <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 border-t border-slate-100 pt-3">
               {[
-                { label: 'All Projects', value: '' },
-                { label: 'Approved', value: 'APPROVED' },
-                { label: 'Drafts', value: 'DRAFT' },
-                { label: 'Submitted', value: 'SUBMITTED' },
-                { label: 'Under Review', value: 'UNDER_REVIEW' },
-                { label: 'Rejected', value: 'REJECTED' },
+                { label: 'All Projects', value: '', count: catalogTotalCount },
+                { label: 'Approved', value: 'APPROVED', count: catalogApprovedCount },
+                { label: 'Drafts', value: 'DRAFT', count: catalogDraftCount },
+                { label: 'Submitted', value: 'SUBMITTED', count: catalogSubmittedCount },
+                { label: 'Under Review', value: 'UNDER_REVIEW', count: catalogUnderReviewCount },
+                { label: 'Rejected', value: 'REJECTED', count: catalogRejectedCount },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -769,13 +810,20 @@ export const UserDashboard: React.FC = () => {
                     setSelectedStatus(tab.value);
                     setPage(0);
                   }}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                     selectedStatus === tab.value
                       ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      : 'text-slate-600 hover:bg-slate-100 bg-slate-50 border border-slate-200/60'
                   }`}
                 >
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                    selectedStatus === tab.value
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {tab.count}
+                  </span>
                 </button>
               ))}
             </div>
