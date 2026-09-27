@@ -21,10 +21,12 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final com.projectvault.service.AuditLogService auditLogService;
 
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper) {
+    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, com.projectvault.service.AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -59,8 +61,11 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
+        Role oldRole = user.getRole();
         user.setRole(request.getRole());
         User updated = userRepository.save(user);
+
+        auditLogService.logEvent(id, "USER_ROLE_UPDATED", "USER", id, "Role updated from " + oldRole + " to " + request.getRole(), null);
         return userMapper.toUserSummaryDto(updated);
     }
 
@@ -70,6 +75,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
+        UserStatus oldStatus = user.getUserStatus();
         user.setUserStatus(request.getUserStatus());
         if (request.getUserStatus() == UserStatus.INACTIVE) {
             user.setActive(false);
@@ -78,6 +84,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User updated = userRepository.save(user);
+        auditLogService.logEvent(id, "USER_STATUS_UPDATED", "USER", id, "Status updated from " + oldStatus + " to " + request.getUserStatus() + " (Graduation Lifecycle)", null);
         return userMapper.toUserSummaryDto(updated);
     }
 }

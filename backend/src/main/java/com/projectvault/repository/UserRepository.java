@@ -17,4 +17,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findByDepartmentId(Long departmentId, Pageable pageable);
     Page<User> findByRole(Role role, Pageable pageable);
     Page<User> findByUserStatus(UserStatus userStatus, Pageable pageable);
+
+    long countByRole(Role role);
+    long countByUserStatus(UserStatus userStatus);
 }

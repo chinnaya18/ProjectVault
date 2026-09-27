@@ -44,10 +44,11 @@ class RagService:
                     tech_stack=target_proj.get("ai_tech_stack") or []
                 ))
 
-        # Perform semantic vector retrieval
-        query_vector = embedding_service.generate_embedding(question)
+        # Perform hybrid semantic vector retrieval
+        query_vector = embedding_service.generate_embedding(question, expand=True)
         search_results = vector_service.search_similar_projects(
             query_vector=query_vector,
+            query_text=question,
             limit=limit,
             threshold=0.15,
             department_id=req.department_id

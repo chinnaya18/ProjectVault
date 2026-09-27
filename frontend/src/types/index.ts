@@ -44,6 +44,7 @@ export interface ProjectWorkflowHistory {
   changedByUserId: number;
   changedByUserName?: string;
   changedByFullName?: string;
+  remarks?: string;
   createdAt: string;
 }
 
@@ -73,7 +74,34 @@ export interface ProjectSummary {
   guideFacultyId?: number;
   guideFacultyName?: string;
   repositoryUrl?: string;
+  plagiarismScore?: number;
+  duplicationScore?: number;
+  plagiarismReport?: string;
+  plagiarismStatus?: string;
+  similarityScore?: number;
   createdAt: string;
+}
+
+export interface MatchedArchivedProject {
+  project_id: number;
+  title: string;
+  similarity_score: number;
+  status: string;
+  department_name?: string;
+  similarity_summary?: string;
+}
+
+export interface PlagiarismReportDetail {
+  plagiarism_score: number;
+  plagiarism_verdict: string;
+  duplication_score: number;
+  duplication_verdict: string;
+  internet_sources_detected?: { source_name?: string; match_percentage?: number; is_properly_cited?: boolean; details?: string }[];
+  valid_citations_detected?: { citation_text: string; source_type: string; status: string }[];
+  uncited_matches?: string[];
+  matched_archived_projects?: MatchedArchivedProject[];
+  summary_explanation?: string;
+  recommendation_for_faculty?: string;
 }
 
 export interface ProjectDetail extends ProjectSummary {
@@ -142,3 +170,115 @@ export interface UpdateProjectRequest {
   visibility?: ProjectVisibility;
   repositoryUrl?: string;
 }
+
+// ==========================================
+// AI Microservice Types
+// ==========================================
+
+export interface ProjectSearchResult {
+  id: number;
+  title: string;
+  abstract: string;
+  academic_year: string;
+  semester: number;
+  project_type: string;
+  status: string;
+  visibility: string;
+  department_id: number;
+  department_name?: string;
+  author_name?: string;
+  similarity_score: number;
+  domain?: string;
+  tech_stack: string[];
+  keywords: string[];
+  repository_url?: string;
+}
+
+export interface TopicFeedback {
+  query: string;
+  is_novel: boolean;
+  verdict: string;
+  domain: string;
+  academic_value: string;
+  recommended_tech_stack: string[];
+  implementation_roadmap: string[];
+  key_challenges: string[];
+  faculty_guidance: string;
+}
+
+export interface SemanticSearchResponse {
+  query: string;
+  total_results: number;
+  results: ProjectSearchResult[];
+  execution_time_ms: number;
+  topic_feedback?: TopicFeedback | null;
+}
+
+export interface ProjectCitation {
+  id: number;
+  title: string;
+  similarity_score: number;
+  domain?: string;
+  tech_stack: string[];
+}
+
+export interface AskQuestionResponse {
+  question: string;
+  answer: string;
+  grounded: boolean;
+  referenced_projects: ProjectCitation[];
+  retrieved_count: number;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT_CONTEXT' | string;
+  execution_time_ms: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  referenced_projects?: ProjectCitation[];
+  grounded?: boolean;
+  confidence?: string;
+  execution_time_ms?: number;
+  isLoading?: boolean;
+}
+
+export interface DashboardAnalytics {
+  totalProjects: number;
+  approvedProjects: number;
+  underReviewProjects: number;
+  submittedProjects: number;
+  draftProjects: number;
+  rejectedProjects: number;
+  archivedProjects: number;
+  totalUsers: number;
+  studentUsers: number;
+  facultyUsers: number;
+  adminUsers: number;
+  alumniUsers: number;
+  totalDepartments: number;
+  departmentProjectCounts: Record<string, number>;
+  statusCounts: Record<string, number>;
+  domainDistribution: Record<string, number>;
+  topTechStacks: Record<string, number>;
+}
+
+export interface AuditLog {
+  id: number;
+  userId?: number;
+  userName?: string;
+  userEmail?: string;
+  action: string;
+  entityType: string;
+  entityId?: number;
+  details?: string;
+  ipAddress?: string;
+  timestamp: string;
+}
+
+export interface ProjectRecommendation extends ProjectSummary {
+  similarityScore?: number;
+}
+
+

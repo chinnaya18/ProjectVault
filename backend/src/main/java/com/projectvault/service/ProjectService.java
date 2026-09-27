@@ -13,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface ProjectService {
     PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status, ProjectVisibility visibility, Pageable pageable, UserPrincipal currentUser);
+    PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status, ProjectVisibility visibility, String query, Pageable pageable, UserPrincipal currentUser);
+    java.util.List<ProjectSummaryDto> getProjectRecommendations(Long projectId, UserPrincipal currentUser);
     ProjectDetailDto getProjectById(Long id, UserPrincipal currentUser);
     ProjectDetailDto createProject(CreateProjectRequest request, UserPrincipal currentUser);
     ProjectDetailDto updateProject(Long id, UpdateProjectRequest request, UserPrincipal currentUser);
@@ -22,4 +24,6 @@ public interface ProjectService {
     com.projectvault.dto.response.ProjectFileDto uploadProjectFile(Long projectId, org.springframework.web.multipart.MultipartFile file, UserPrincipal currentUser);
     org.springframework.core.io.Resource getProjectFileResource(Long projectId, Long fileId, UserPrincipal currentUser);
     void deleteProjectFile(Long projectId, Long fileId, UserPrincipal currentUser);
+
+    ProjectDetailDto triggerPlagiarismCheck(Long id, UserPrincipal currentUser);
 }

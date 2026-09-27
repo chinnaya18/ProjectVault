@@ -44,15 +44,20 @@ def close_db_pool() -> None:
 
 def _check_vector_extension() -> bool:
     """Check if the vector extension is available in PostgreSQL."""
-    global _has_pgvector
+    global _has_pgvector, _connection_pool
+    if _connection_pool is None:
+        return False
     try:
-        with get_db_connection() as conn:
+        conn = _connection_pool.getconn()
+        try:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1 FROM pg_extension WHERE extname = 'vector';")
                 res = cur.fetchone()
                 _has_pgvector = bool(res)
                 logger.info(f"pgvector extension status: {'Available' if _has_pgvector else 'Not installed (fallback enabled)'}")
                 return _has_pgvector
+        finally:
+            _connection_pool.putconn(conn)
     except Exception as e:
         logger.warning(f"Could not verify pgvector extension: {e}")
         _has_pgvector = False

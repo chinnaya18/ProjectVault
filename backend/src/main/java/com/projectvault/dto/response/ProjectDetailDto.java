@@ -24,6 +24,10 @@ public class ProjectDetailDto {
     private Long guideFacultyId;
     private String guideFacultyName;
     private String repositoryUrl;
+    private Double plagiarismScore;
+    private Double duplicationScore;
+    private String plagiarismReport;
+    private String plagiarismStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<ProjectMemberDto> members;
@@ -218,5 +222,37 @@ public class ProjectDetailDto {
 
     public void setFiles(List<ProjectFileDto> files) {
         this.files = files;
+    }
+
+    public Double getPlagiarismScore() {
+        return plagiarismScore;
+    }
+
+    public void setPlagiarismScore(Double plagiarismScore) {
+        this.plagiarismScore = plagiarismScore;
+    }
+
+    public Double getDuplicationScore() {
+        return duplicationScore;
+    }
+
+    public void setDuplicationScore(Double duplicationScore) {
+        this.duplicationScore = duplicationScore;
+    }
+
+    public String getPlagiarismReport() {
+        return plagiarismReport;
+    }
+
+    public void setPlagiarismReport(String plagiarismReport) {
+        this.plagiarismReport = plagiarismReport;
+    }
+
+    public String getPlagiarismStatus() {
+        return plagiarismStatus;
+    }
+
+    public void setPlagiarismStatus(String plagiarismStatus) {
+        this.plagiarismStatus = plagiarismStatus;
     }
 }

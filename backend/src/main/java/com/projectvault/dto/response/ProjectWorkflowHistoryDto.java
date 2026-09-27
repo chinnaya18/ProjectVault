@@ -11,16 +11,22 @@ public class ProjectWorkflowHistoryDto {
     private Long changedByUserId;
     private String changedByFullName;
     private LocalDateTime createdAt;
+    private String remarks;
 
     public ProjectWorkflowHistoryDto() {}
 
     public ProjectWorkflowHistoryDto(Long id, ProjectStatus fromStatus, ProjectStatus toStatus, Long changedByUserId, String changedByFullName, LocalDateTime createdAt) {
+        this(id, fromStatus, toStatus, changedByUserId, changedByFullName, createdAt, null);
+    }
+
+    public ProjectWorkflowHistoryDto(Long id, ProjectStatus fromStatus, ProjectStatus toStatus, Long changedByUserId, String changedByFullName, LocalDateTime createdAt, String remarks) {
         this.id = id;
         this.fromStatus = fromStatus;
         this.toStatus = toStatus;
         this.changedByUserId = changedByUserId;
         this.changedByFullName = changedByFullName;
         this.createdAt = createdAt;
+        this.remarks = remarks;
     }
 
     public Long getId() {
@@ -69,5 +75,13 @@ public class ProjectWorkflowHistoryDto {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 }

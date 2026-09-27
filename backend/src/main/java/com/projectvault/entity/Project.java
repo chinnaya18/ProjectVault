@@ -49,6 +49,18 @@ public class Project {
     @Column(name = "repository_url", length = 255)
     private String repositoryUrl;
 
+    @Column(name = "plagiarism_score")
+    private Double plagiarismScore;
+
+    @Column(name = "duplication_score")
+    private Double duplicationScore;
+
+    @Column(name = "plagiarism_report", columnDefinition = "TEXT")
+    private String plagiarismReport;
+
+    @Column(name = "plagiarism_status", length = 50)
+    private String plagiarismStatus = "NOT_SCANNED";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -199,5 +211,37 @@ public class Project {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Double getPlagiarismScore() {
+        return plagiarismScore;
+    }
+
+    public void setPlagiarismScore(Double plagiarismScore) {
+        this.plagiarismScore = plagiarismScore;
+    }
+
+    public Double getDuplicationScore() {
+        return duplicationScore;
+    }
+
+    public void setDuplicationScore(Double duplicationScore) {
+        this.duplicationScore = duplicationScore;
+    }
+
+    public String getPlagiarismReport() {
+        return plagiarismReport;
+    }
+
+    public void setPlagiarismReport(String plagiarismReport) {
+        this.plagiarismReport = plagiarismReport;
+    }
+
+    public String getPlagiarismStatus() {
+        return plagiarismStatus;
+    }
+
+    public void setPlagiarismStatus(String plagiarismStatus) {
+        this.plagiarismStatus = plagiarismStatus;
     }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ProjectDetail, ProjectStatus, ProjectVisibility, ApiResponse, ProjectFile } from '../types';
+import { Link } from 'react-router-dom';
+import { ProjectDetail, ProjectStatus, ProjectVisibility, ApiResponse, ProjectFile, PlagiarismReportDetail } from '../types';
 import api, { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatFacultyName } from '../utils/userFormat';
@@ -21,7 +22,14 @@ import {
   Download,
   Lock,
   Clock,
-  History
+  History,
+  ShieldCheck,
+  AlertTriangle,
+  RotateCw,
+  Sparkles,
+  Database,
+  Layers,
+  Check
 } from 'lucide-react';
 
 interface ProjectDetailModalProps {
@@ -53,23 +61,37 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
   // File Upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [isScanningPlagiarism, setIsScanningPlagiarism] = useState(false);
+
+  // Faculty Review Feedback Modal state
+  const [pendingStatusTransition, setPendingStatusTransition] = useState<ProjectStatus | null>(null);
+  const [facultyFeedbackText, setFacultyFeedbackText] = useState('');
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(projectId);
 
   useEffect(() => {
-    if (isOpen && projectId) {
-      fetchProjectDetail();
+    setActiveProjectId(projectId);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (isOpen && activeProjectId) {
+      fetchProjectDetail(activeProjectId);
     } else {
       setProject(null);
       setIsEditing(false);
       setError(null);
       setSuccessMsg(null);
+      setPendingStatusTransition(null);
+      setFacultyFeedbackText('');
     }
-  }, [isOpen, projectId]);
+  }, [isOpen, activeProjectId]);
 
-  const fetchProjectDetail = async () => {
+  const fetchProjectDetail = async (idToFetch?: number) => {
+    const targetId = idToFetch ?? activeProjectId ?? projectId;
+    if (!targetId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const res = await api.get<ApiResponse<ProjectDetail>>(`/projects/${projectId}`);
+      const res = await api.get<ApiResponse<ProjectDetail>>(`/projects/${targetId}`);
       if (res.data && res.data.data) {
         const p = res.data.data;
         setProject(p);
@@ -88,8 +110,9 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
     }
   };
 
-  const handleStatusTransition = async (targetStatus: ProjectStatus) => {
-    if (!projectId) return;
+  const handleStatusTransition = async (targetStatus: ProjectStatus, feedback?: string) => {
+    const targetId = activeProjectId ?? projectId;
+    if (!targetId) return;
 
     if (targetStatus === 'SUBMITTED') {
       const hasFiles = project?.files && project.files.length > 0;
@@ -104,9 +127,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
     setError(null);
     setSuccessMsg(null);
     try {
-      await api.patch(`/projects/${projectId}/status`, { status: targetStatus });
+      const payload: any = { status: targetStatus };
+      if (feedback && feedback.trim()) {
+        payload.feedback = feedback.trim();
+      }
+      await api.patch(`/projects/${targetId}/status`, payload);
       setSuccessMsg(`Project status updated to ${targetStatus.replace('_', ' ')}`);
-      await fetchProjectDetail();
+      setPendingStatusTransition(null);
+      setFacultyFeedbackText('');
+      await fetchProjectDetail(targetId);
       onUpdate();
     } catch (err: any) {
       setError(getErrorMessage(err, `Failed to transition status to ${targetStatus}`));
@@ -115,13 +144,32 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
     }
   };
 
+  const handleRunPlagiarismCheck = async () => {
+    const targetId = activeProjectId ?? projectId;
+    if (!targetId) return;
+    setIsScanningPlagiarism(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      await api.post(`/projects/${targetId}/plagiarism-check`);
+      setSuccessMsg('AI Plagiarism & Archive Duplication scan completed successfully!');
+      await fetchProjectDetail(targetId);
+      onUpdate();
+    } catch (err: any) {
+      setError(getErrorMessage(err, 'Failed to complete AI plagiarism check'));
+    } finally {
+      setIsScanningPlagiarism(false);
+    }
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectId) return;
+    const targetId = activeProjectId ?? projectId;
+    if (!targetId) return;
     setIsSavingEdit(true);
     setError(null);
     try {
-      await api.put(`/projects/${projectId}`, {
+      await api.put(`/projects/${targetId}`, {
         title: editTitle,
         abstractText: editAbstract,
         academicYear: editYear,
@@ -132,7 +180,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
       });
       setIsEditing(false);
       setSuccessMsg('Project updated successfully!');
-      await fetchProjectDetail();
+      await fetchProjectDetail(targetId);
       onUpdate();
     } catch (err: any) {
       setError(getErrorMessage(err, 'Failed to update project details'));
@@ -143,7 +191,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
 
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectId || !selectedFile) return;
+    const targetId = activeProjectId ?? projectId;
+    if (!targetId || !selectedFile) return;
     setIsUploadingFile(true);
     setError(null);
 
@@ -151,12 +200,12 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
     formData.append('file', selectedFile);
 
     try {
-      await api.post(`/projects/${projectId}/files`, formData, {
+      await api.post(`/projects/${targetId}/files`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSelectedFile(null);
       setSuccessMsg('Document attachment uploaded successfully!');
-      await fetchProjectDetail();
+      await fetchProjectDetail(targetId);
     } catch (err: any) {
       setError(getErrorMessage(err, 'Failed to upload document attachment'));
     } finally {
@@ -165,25 +214,28 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
   };
 
   const handleFileDownload = (file: ProjectFile) => {
-    if (!projectId) return;
-    window.open(`${api.defaults.baseURL}/projects/${projectId}/files/${file.id}/download`, '_blank');
+    const targetId = activeProjectId ?? projectId;
+    if (!targetId) return;
+    window.open(`${api.defaults.baseURL}/projects/${targetId}/files/${file.id}/download`, '_blank');
   };
 
   const handleFileDelete = async (fileId: number) => {
-    if (!projectId || !window.confirm('Delete this file attachment?')) return;
+    const targetId = activeProjectId ?? projectId;
+    if (!targetId || !window.confirm('Delete this file attachment?')) return;
     try {
-      await api.delete(`/projects/${projectId}/files/${fileId}`);
+      await api.delete(`/projects/${targetId}/files/${fileId}`);
       setSuccessMsg('File attachment removed.');
-      await fetchProjectDetail();
+      await fetchProjectDetail(targetId);
     } catch (err: any) {
       setError(getErrorMessage(err, 'Failed to delete file'));
     }
   };
 
   const handleDelete = async () => {
-    if (!projectId || !window.confirm('Are you sure you want to delete this project draft?')) return;
+    const targetId = activeProjectId ?? projectId;
+    if (!targetId || !window.confirm('Are you sure you want to delete this project draft?')) return;
     try {
-      await api.delete(`/projects/${projectId}`);
+      await api.delete(`/projects/${targetId}`);
       onUpdate();
       onClose();
     } catch (err: any) {
@@ -263,6 +315,24 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                   </button>
                 </div>
               )}
+
+              {/* Rejection / Revision Feedback Banner */}
+              {project.status === 'REJECTED' && (() => {
+                const latestWithRemarks = [...(project.workflowHistory || [])]
+                  .reverse()
+                  .find((h) => h.remarks && h.remarks.trim().length > 0);
+                return (
+                  <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 space-y-1.5 shadow-xs">
+                    <div className="flex items-center space-x-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Faculty Revision Feedback</span>
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed">
+                      {latestWithRemarks?.remarks || 'This project submission requires revision before it can be approved.'}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* EDIT FORM MODE */}
               {isEditing ? (
@@ -390,6 +460,28 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
               ) : (
                 /* READ-ONLY DISPLAY MODE */
                 <>
+                  {/* Student Rejection Feedback Alert Banner */}
+                  {project.status === 'REJECTED' && (
+                    <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 space-y-2 shadow-xs">
+                      <div className="flex items-center space-x-2 font-bold text-sm text-rose-800">
+                        <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                        <span>Action Required: Faculty Guide Requested Revisions</span>
+                      </div>
+                      {(() => {
+                        const latestRejection = project.workflowHistory?.slice().reverse().find(h => h.toStatus === 'REJECTED');
+                        return (
+                          <div className="text-xs text-rose-900 leading-relaxed font-medium bg-white/80 p-3 rounded-xl border border-rose-200">
+                            <span className="font-bold text-rose-950 block mb-0.5">Faculty Evaluator Feedback:</span>
+                            {latestRejection?.remarks || "Revisions requested on your abstract and project documentation. Please make updates and re-submit."}
+                          </div>
+                        );
+                      })()}
+                      <p className="text-[11px] text-rose-600">
+                        You can update the project metadata, upload revised attachments, and then click <span className="font-bold">"Re-open as Draft"</span> below to re-submit for faculty review.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 leading-tight mb-2">{project.title}</h1>
                     <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500">
@@ -443,21 +535,229 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                     </div>
                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                       <span className="text-xs font-semibold text-slate-400 block mb-1">Repository</span>
-                      {project.repositoryUrl ? (
-                        <a
-                          href={project.repositoryUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-600 font-semibold hover:underline flex items-center space-x-1 text-sm truncate"
-                        >
-                          <span>{project.repositoryUrl}</span>
-                          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                        </a>
+                      {user ? (
+                        project.repositoryUrl ? (
+                          <a
+                            href={project.repositoryUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 font-semibold hover:underline flex items-center space-x-1 text-sm truncate"
+                          >
+                            <span>{project.repositoryUrl}</span>
+                            <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 italic">No repository linked</span>
+                        )
                       ) : (
-                        <span className="text-slate-400 italic">No repository linked</span>
+                        <div className="flex items-center space-x-1.5 text-xs text-slate-500 font-medium bg-slate-50 p-2 rounded-lg border border-slate-200/70">
+                          <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>Protected. <Link to="/login" className="font-bold text-indigo-600 hover:underline">Log in</Link> to view.</span>
+                        </div>
                       )}
                     </div>
                   </div>
+
+                  {/* AI Plagiarism & Archive Duplication Verification Section (FACULTY REVIEW ONLY) */}
+                  {isFaculty && (project.status === 'DRAFT' || project.status === 'SUBMITTED' || project.status === 'UNDER_REVIEW') && (() => {
+                    let parsedReport: PlagiarismReportDetail | null = null;
+                    if (project.plagiarismReport) {
+                      try {
+                        parsedReport = typeof project.plagiarismReport === 'string'
+                          ? JSON.parse(project.plagiarismReport)
+                          : project.plagiarismReport;
+                      } catch {
+                        parsedReport = null;
+                      }
+                    }
+
+                    const plagScore = project.plagiarismScore ?? parsedReport?.plagiarism_score ?? null;
+                    const dupScore = project.duplicationScore ?? parsedReport?.duplication_score ?? null;
+
+                    const getPlagColor = (score: number | null) => {
+                      if (score === null) return 'text-slate-500 bg-slate-100 border-slate-200';
+                      if (score < 20) return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+                      if (score <= 50) return 'text-amber-700 bg-amber-50 border-amber-200';
+                      return 'text-rose-700 bg-rose-50 border-rose-200';
+                    };
+
+                    const getDupColor = (score: number | null) => {
+                      if (score === null) return 'text-slate-500 bg-slate-100 border-slate-200';
+                      if (score < 40) return 'text-blue-700 bg-blue-50 border-blue-200';
+                      if (score < 75) return 'text-amber-700 bg-amber-50 border-amber-200';
+                      return 'text-rose-700 bg-rose-50 border-rose-200';
+                    };
+
+                    return (
+                      <div className="rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/70 via-white to-slate-50/50 p-5 space-y-4 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center space-x-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200">
+                              <Sparkles className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span>AI Academic Integrity & Originality Assessment</span>
+                                {project.plagiarismStatus === 'COMPLETED' && (
+                                  <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <Check className="w-3 h-3" />
+                                    <span>Verified</span>
+                                  </span>
+                                )}
+                              </h3>
+                              <p className="text-xs text-slate-500">
+                                Internet Plagiarism (citations excluded) & Archive Duplication Scanner
+                              </p>
+                            </div>
+                          </div>
+
+                          {(isFaculty || isAdmin || isCreator) && (
+                            <button
+                              onClick={handleRunPlagiarismCheck}
+                              disabled={isScanningPlagiarism}
+                              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors"
+                              title="Re-run AI Plagiarism & Duplication Scan"
+                            >
+                              <RotateCw className={`w-3.5 h-3.5 text-indigo-600 ${isScanningPlagiarism ? 'animate-spin' : ''}`} />
+                              <span>{isScanningPlagiarism ? 'Scanning...' : 'Re-scan Originality'}</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Dual Score Metric Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* 1. Internet Plagiarism Score */}
+                          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Internet Plagiarism</span>
+                              </div>
+                              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getPlagColor(plagScore)}`}>
+                                {plagScore !== null ? `${plagScore.toFixed(1)}% Plagiarism` : 'Pending Scan'}
+                              </span>
+                            </div>
+
+                            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-500 ${
+                                  plagScore === null ? 'bg-slate-300 w-0' :
+                                  plagScore < 20 ? 'bg-emerald-500' :
+                                  plagScore <= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                                }`}
+                                style={{ width: `${Math.min(100, Math.max(plagScore || 0, 4))}%` }}
+                              />
+                            </div>
+
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              {parsedReport?.summary_explanation || (
+                                plagScore !== null
+                                  ? `Estimated similarity against internet repositories: ${plagScore.toFixed(1)}%.`
+                                  : 'Click Re-scan to analyze plagiarism against web sources.'
+                              )}
+                            </div>
+
+                            {/* Recognized Citations (Excluded from plagiarism) */}
+                            {parsedReport?.valid_citations_detected && parsedReport.valid_citations_detected.length > 0 && (
+                              <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                                <div className="text-[11px] font-bold text-emerald-700 flex items-center space-x-1">
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Recognized Citations (Excluded from Plagiarism):</span>
+                                </div>
+                                <div className="space-y-1">
+                                  {parsedReport.valid_citations_detected.map((cit, idx) => (
+                                    <div key={idx} className="text-[11px] bg-emerald-50/70 border border-emerald-200/60 text-emerald-900 px-2 py-1 rounded-md flex items-start gap-1">
+                                      <span className="shrink-0 text-emerald-600 font-bold">•</span>
+                                      <span className="truncate">{cit.citation_text}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Uncited Matches (if any) */}
+                            {parsedReport?.uncited_matches && parsedReport.uncited_matches.length > 0 && (
+                              <div className="pt-2 border-t border-rose-100 space-y-1">
+                                <div className="text-[11px] font-bold text-rose-700 flex items-center space-x-1">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  <span>Uncredited Matches Detected:</span>
+                                </div>
+                                <ul className="list-disc list-inside text-[11px] text-rose-900 space-y-0.5">
+                                  {parsedReport.uncited_matches.slice(0, 3).map((match, idx) => (
+                                    <li key={idx} className="truncate">{match}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 2. Archive Duplication Score */}
+                          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Layers className="w-4 h-4 text-blue-600" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Archive Duplication</span>
+                              </div>
+                              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getDupColor(dupScore)}`}>
+                                {dupScore !== null ? `${dupScore.toFixed(1)}% Duplication` : 'Pending Scan'}
+                              </span>
+                            </div>
+
+                            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-500 ${
+                                  dupScore === null ? 'bg-slate-300 w-0' :
+                                  dupScore < 40 ? 'bg-blue-500' :
+                                  dupScore < 75 ? 'bg-amber-500' : 'bg-rose-500'
+                                }`}
+                                style={{ width: `${Math.min(100, Math.max(dupScore || 0, 4))}%` }}
+                              />
+                            </div>
+
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              {dupScore !== null
+                                ? (dupScore < 40 ? 'Unique concept. No major overlap found in archived projects.' : `Matches found in existing archived repository records (${dupScore.toFixed(1)}%).`)
+                                : 'Evaluates conceptual overlap with archived project embeddings.'}
+                            </div>
+
+                            {/* Matched Archived Projects */}
+                            {parsedReport?.matched_archived_projects && parsedReport.matched_archived_projects.length > 0 ? (
+                              <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                                <div className="text-[11px] font-bold text-slate-700 flex items-center space-x-1">
+                                  <Database className="w-3.5 h-3.5 text-indigo-500" />
+                                  <span>Closest Archived Projects in Repository:</span>
+                                </div>
+                                <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                                  {parsedReport.matched_archived_projects.map((match) => (
+                                    <div key={match.project_id} className="text-[11px] p-1.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                                      <div className="truncate font-semibold text-slate-800">
+                                        <span className="text-indigo-600 font-mono">#{match.project_id}</span> {match.title}
+                                      </div>
+                                      <span className="shrink-0 font-bold text-xs text-slate-600">
+                                        {Math.round(match.similarity_score * 100)}%
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-400 italic">
+                                No similar archived projects identified.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Faculty Recommendation Banner */}
+                        {parsedReport?.recommendation_for_faculty && (
+                          <div className="rounded-xl p-3 bg-indigo-50/80 border border-indigo-200 text-xs text-indigo-950 flex items-center gap-2">
+                            <span className="font-bold shrink-0">Faculty Action Guide:</span>
+                            <span className="leading-tight">{parsedReport.recommendation_for_faculty}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Document Attachments Section */}
                   <div className="space-y-3 pt-2">
@@ -495,13 +795,20 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                             </div>
 
                             <div className="flex items-center space-x-2 shrink-0">
-                              <button
-                                onClick={() => handleFileDownload(file)}
-                                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold transition-colors"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                <span>Download</span>
-                              </button>
+                              {user ? (
+                                <button
+                                  onClick={() => handleFileDownload(file)}
+                                  className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold transition-colors"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>Download</span>
+                                </button>
+                              ) : (
+                                <span className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-xs font-medium border border-slate-200">
+                                  <Lock className="w-3 h-3 text-slate-400" />
+                                  <span>Protected (Login to download)</span>
+                                </span>
+                              )}
                               {isDraftMode && (isCreator || isAdmin) && (
                                 <button
                                   onClick={() => handleFileDelete(file.id)}
@@ -612,6 +919,12 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                             <div className="text-xs text-slate-500 font-medium">
                               Transitioned by: <span className="text-slate-700 font-semibold">{history.changedByUserName || history.changedByFullName || 'System'}</span>
                             </div>
+                            {history.remarks && (
+                              <div className="mt-1 p-2 rounded-lg bg-amber-50/70 border border-amber-200 text-xs text-amber-900">
+                                <span className="font-semibold text-amber-950">Review Remarks: </span>
+                                {history.remarks}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -655,7 +968,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                     {project.status === 'UNDER_REVIEW' && (isFaculty || isAdmin) && (
                       <>
                         <button
-                          onClick={() => handleStatusTransition('APPROVED')}
+                          onClick={() => {
+                            setPendingStatusTransition('APPROVED');
+                            setFacultyFeedbackText('');
+                          }}
                           disabled={isTransitioning}
                           className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
                         >
@@ -663,7 +979,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                           <span>Approve Project</span>
                         </button>
                         <button
-                          onClick={() => handleStatusTransition('REJECTED')}
+                          onClick={() => {
+                            setPendingStatusTransition('REJECTED');
+                            setFacultyFeedbackText('');
+                          }}
                           disabled={isTransitioning}
                           className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 transition-colors shadow-sm"
                         >
@@ -713,6 +1032,77 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
             </>
           ) : null}
         </div>
+
+        {/* Faculty Review Feedback Prompt Modal */}
+        {pendingStatusTransition && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center space-x-2">
+                  {pendingStatusTransition === 'APPROVED' ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-rose-600" />
+                  )}
+                  <h3 className="font-bold text-slate-900 text-base">
+                    {pendingStatusTransition === 'APPROVED' ? 'Approve Project' : 'Reject / Request Revisions'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setPendingStatusTransition(null)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600">
+                {pendingStatusTransition === 'APPROVED'
+                  ? 'Confirming approval will officially authorize this project in the academic repository. You may optionally leave review commendations or remarks.'
+                  : 'Please provide constructive feedback and revision instructions for the student team. This feedback will be recorded in the audit history and displayed on their submission.'}
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Faculty Feedback / Remarks {pendingStatusTransition === 'REJECTED' && <span className="text-rose-500">*</span>}
+                </label>
+                <textarea
+                  rows={3}
+                  value={facultyFeedbackText}
+                  onChange={(e) => setFacultyFeedbackText(e.target.value)}
+                  placeholder={
+                    pendingStatusTransition === 'APPROVED'
+                      ? 'Optional approval remarks (e.g. Excellent technical implementation, approved for archive)...'
+                      : 'Specify required modifications, missing references, or documentation issues...'
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingStatusTransition(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isTransitioning || (pendingStatusTransition === 'REJECTED' && !facultyFeedbackText.trim())}
+                  onClick={() => handleStatusTransition(pendingStatusTransition, facultyFeedbackText)}
+                  className={`px-5 py-2 rounded-xl text-xs font-bold text-white transition-colors disabled:opacity-50 ${
+                    pendingStatusTransition === 'APPROVED'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-rose-600 hover:bg-rose-700'
+                  }`}
+                >
+                  {isTransitioning ? 'Saving...' : pendingStatusTransition === 'APPROVED' ? 'Confirm Approval' : 'Confirm Rejection'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

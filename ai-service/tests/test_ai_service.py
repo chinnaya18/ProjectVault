@@ -74,3 +74,10 @@ async def test_rag_pipeline_empty_handling():
     assert res.question == req.question
     assert isinstance(res.answer, str)
     assert res.confidence in ["HIGH", "MEDIUM", "LOW", "INSUFFICIENT_CONTEXT"]
+
+def test_project_recommendations_structure():
+    """Verify recommendation function returns properly formatted results."""
+    # Testing with non-existent project returns empty list without error
+    recs = vector_service.get_project_recommendations(project_id=999999, limit=5)
+    assert isinstance(recs, list)
+

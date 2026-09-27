@@ -1,10 +1,23 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { UsersPage } from './pages/UsersPage';
+import { DepartmentsPage } from './pages/DepartmentsPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { AuditLogsPage } from './pages/AuditLogsPage';
+
+// Admin only route wrapper
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user || user.role !== 'ADMIN') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
 
 export default function App() {
   return (
@@ -17,12 +30,14 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<RegisterPage />} />
-              <Route path="/departments" element={<Navigate to="/" replace />} />
-              <Route path="/users" element={<UsersPage />} />
+              <Route path="/departments" element={<AdminRoute><DepartmentsPage /></AdminRoute>} />
+              <Route path="/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+              <Route path="/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
+              <Route path="/audit-logs" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
             </Routes>
           </main>
           <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-            ProjectVault &copy; {new Date().getFullYear()} Academic Repository System — Powered by Spring Boot & React
+            ProjectVault &copy; {new Date().getFullYear()} Academic Repository System — Master of Computer Applications (MCA)
           </footer>
         </div>
       </AuthProvider>

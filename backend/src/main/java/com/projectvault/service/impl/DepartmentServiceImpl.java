@@ -20,10 +20,12 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     private final DepartmentRepository departmentRepository;
     private final DepartmentMapper departmentMapper;
+    private final com.projectvault.service.AuditLogService auditLogService;
 
-    public DepartmentServiceImpl(DepartmentRepository departmentRepository, DepartmentMapper departmentMapper) {
+    public DepartmentServiceImpl(DepartmentRepository departmentRepository, DepartmentMapper departmentMapper, com.projectvault.service.AuditLogService auditLogService) {
         this.departmentRepository = departmentRepository;
         this.departmentMapper = departmentMapper;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -54,6 +56,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 
         Department department = new Department(request.getName(), request.getCode(), request.getDescription());
         Department saved = departmentRepository.save(department);
+        auditLogService.logEvent(null, "DEPARTMENT_CREATED", "DEPARTMENT", saved.getId(), "Created department: " + saved.getName() + " (" + saved.getCode() + ")", null);
         return departmentMapper.toDepartmentDto(saved);
     }
 
@@ -82,6 +85,7 @@ public class DepartmentServiceImpl implements DepartmentService {
         }
 
         Department updated = departmentRepository.save(department);
+        auditLogService.logEvent(null, "DEPARTMENT_UPDATED", "DEPARTMENT", updated.getId(), "Updated department: " + updated.getName() + " (" + updated.getCode() + ")", null);
         return departmentMapper.toDepartmentDto(updated);
     }
 
@@ -91,5 +95,6 @@ public class DepartmentServiceImpl implements DepartmentService {
         Department department = departmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", id));
         departmentRepository.delete(department);
+        auditLogService.logEvent(null, "DEPARTMENT_DELETED", "DEPARTMENT", id, "Deleted department: " + department.getName() + " (" + department.getCode() + ")", null);
     }
 }

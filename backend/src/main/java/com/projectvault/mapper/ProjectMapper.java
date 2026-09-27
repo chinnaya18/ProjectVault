@@ -45,6 +45,10 @@ public class ProjectMapper {
         );
         dto.setGuideFacultyId(guideId);
         dto.setGuideFacultyName(guideName);
+        dto.setPlagiarismScore(project.getPlagiarismScore());
+        dto.setDuplicationScore(project.getDuplicationScore());
+        dto.setPlagiarismReport(project.getPlagiarismReport());
+        dto.setPlagiarismStatus(project.getPlagiarismStatus());
         return dto;
     }
 
@@ -107,6 +111,10 @@ public class ProjectMapper {
         );
         dto.setGuideFacultyId(guideId);
         dto.setGuideFacultyName(guideName);
+        dto.setPlagiarismScore(project.getPlagiarismScore());
+        dto.setDuplicationScore(project.getDuplicationScore());
+        dto.setPlagiarismReport(project.getPlagiarismReport());
+        dto.setPlagiarismStatus(project.getPlagiarismStatus());
         return dto;
     }
 
@@ -120,7 +128,8 @@ public class ProjectMapper {
                 history.getToStatus(),
                 userId,
                 userName,
-                history.getCreatedAt()
+                history.getCreatedAt(),
+                history.getRemarks()
         );
     }
 

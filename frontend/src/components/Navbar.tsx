@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, FolderGit2, Users, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { BookOpen, FolderGit2, Users, LogOut, LogIn, UserPlus, BarChart3, ShieldAlert } from 'lucide-react';
 import { formatUserNameByRole } from '../utils/userFormat';
 
 export const Navbar: React.FC = () => {
@@ -50,17 +50,41 @@ export const Navbar: React.FC = () => {
             </Link>
 
             {user && user.role === 'ADMIN' && (
-              <Link
-                to="/users"
-                className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive('/users')
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                <span>Users</span>
-              </Link>
+              <>
+                <Link
+                  to="/analytics"
+                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive('/analytics')
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Analytics</span>
+                </Link>
+                <Link
+                  to="/users"
+                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive('/users')
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Users & Roster</span>
+                </Link>
+                <Link
+                  to="/audit-logs"
+                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive('/audit-logs')
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>Audit Trail</span>
+                </Link>
+              </>
             )}
           </nav>
 

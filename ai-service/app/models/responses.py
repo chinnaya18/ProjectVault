@@ -24,6 +24,7 @@ class SemanticSearchResponse(BaseModel):
     total_results: int
     results: List[ProjectSearchResult]
     execution_time_ms: float
+    topic_feedback: Optional[Dict[str, Any]] = Field(None, description="AI topic viability analysis and recommendations if query is novel or sparse")
 
 class ProjectCitation(BaseModel):
     id: int
@@ -74,3 +75,32 @@ class HealthResponse(BaseModel):
     gemini_configured: bool
     gemini_model: str
     database: Dict[str, Any]
+
+class MatchedArchivedProject(BaseModel):
+    project_id: int
+    title: str
+    similarity_score: float
+    status: str
+    department_name: Optional[str] = None
+    similarity_summary: Optional[str] = None
+
+class PlagiarismReportDetail(BaseModel):
+    plagiarism_score: float = Field(..., description="Plagiarism score percentage (0-100)")
+    plagiarism_verdict: str = Field(..., description="Verdict e.g. CLEAN, MODERATE_PLAGIARISM, SEVERE_PLAGIARISM")
+    duplication_score: float = Field(..., description="Duplication score percentage against archived projects (0-100)")
+    duplication_verdict: str = Field(..., description="Verdict e.g. UNIQUE, PARTIAL_DUPLICATE, HIGH_DUPLICATE")
+    internet_sources_detected: List[Dict[str, Any]] = Field(default_factory=list)
+    valid_citations_detected: List[Dict[str, Any]] = Field(default_factory=list, description="Citations found that were properly attributed and excluded from plagiarism")
+    uncited_matches: List[str] = Field(default_factory=list, description="Uncited text fragments or claims")
+    matched_archived_projects: List[MatchedArchivedProject] = Field(default_factory=list)
+    summary_explanation: str
+    recommendation_for_faculty: str
+
+class PlagiarismCheckResponse(BaseModel):
+    project_id: Optional[int] = None
+    plagiarism_score: float
+    duplication_score: float
+    report: PlagiarismReportDetail
+    ai_status: str = Field("COMPLETED", description="COMPLETED, HEURISTIC_FALLBACK, or FAILED")
+    is_persisted: bool = False
+

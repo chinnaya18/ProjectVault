@@ -34,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
     private final UserMapper userMapper;
+    private final com.projectvault.service.AuditLogService auditLogService;
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -41,13 +42,15 @@ public class AuthServiceImpl implements AuthService {
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             JwtProvider jwtProvider,
-            UserMapper userMapper) {
+            UserMapper userMapper,
+            com.projectvault.service.AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtProvider = jwtProvider;
         this.userMapper = userMapper;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -80,6 +83,7 @@ public class AuthServiceImpl implements AuthService {
         );
 
         User savedUser = userRepository.save(user);
+        auditLogService.logEvent(savedUser.getId(), "USER_REGISTER", "USER", savedUser.getId(), "User registered account: " + savedUser.getEmail(), null);
 
         String token = jwtProvider.generateTokenFromUser(savedUser.getId(), savedUser.getEmail());
         UserSummaryDto userSummary = userMapper.toUserSummaryDto(savedUser);
@@ -88,7 +92,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -106,6 +110,8 @@ public class AuthServiceImpl implements AuthService {
 
             String token = jwtProvider.generateToken(authentication);
             UserSummaryDto userSummary = userMapper.toUserSummaryDto(user);
+
+            auditLogService.logEvent(user.getId(), "USER_LOGIN", "USER", user.getId(), "User successfully authenticated", null);
 
             return new AuthResponse(token, jwtProvider.getJwtExpirationMs(), userSummary);
         } catch (BadCredentialsException ex) {

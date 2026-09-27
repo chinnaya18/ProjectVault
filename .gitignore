@@ -1,9 +1,26 @@
-# Node & Frontend dependencies & build artifacts
+# ==========================================
+# ProjectVault Global Git Ignore Configuration
+# ==========================================
+
+# Environment & Secrets (NEVER COMMIT SECRETS)
+.env
+.env.*
+!.env.example
+*.env
+*.env.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# Node.js & Frontend build artifacts
 node_modules/
 dist/
 dist-ssr/
 .vite/
-*.log
+*.local
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -16,14 +33,23 @@ target/
 *.jar
 *.war
 *.ear
+.gradle/
+bin/
 
-# Python virtualenvs & cache
+# Python virtual environments & bytecode cache
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
 venv/
 .venv/
 env/
+ENV/
+*.egg-info/
 
 # IDE & Editor files
 .vscode/
@@ -31,8 +57,17 @@ env/
 *.swp
 *.swo
 *.iml
+*.iws
+*.ipr
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
 
-# Antigravity & Agentic Workspace temp files
+# Antigravity & Agent workspace temp directories
 .system_generated/
 .gemini/
 brain/
@@ -40,11 +75,14 @@ knowledge/
 tmp/
 *.tmp
 
-# Application Storage & Local Uploads
+# Application Storage & Uploaded Files
 storage/projects/*
 !storage/projects/.gitkeep
 storage/local-dir/
+storage/local-dir/*
 
-# OS generated files
+# Logs & OS generated files
+*.log
 .DS_Store
 Thumbs.db
+desktop.ini

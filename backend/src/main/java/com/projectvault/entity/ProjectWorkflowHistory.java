@@ -30,15 +30,23 @@ public class ProjectWorkflowHistory {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "remarks", columnDefinition = "TEXT")
+    private String remarks;
+
     public ProjectWorkflowHistory() {
         this.createdAt = LocalDateTime.now();
     }
 
     public ProjectWorkflowHistory(Project project, ProjectStatus fromStatus, ProjectStatus toStatus, User changedBy) {
+        this(project, fromStatus, toStatus, changedBy, null);
+    }
+
+    public ProjectWorkflowHistory(Project project, ProjectStatus fromStatus, ProjectStatus toStatus, User changedBy, String remarks) {
         this.project = project;
         this.fromStatus = fromStatus;
         this.toStatus = toStatus;
         this.changedBy = changedBy;
+        this.remarks = remarks;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -94,5 +102,13 @@ public class ProjectWorkflowHistory {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 }

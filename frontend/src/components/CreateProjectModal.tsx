@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Department, CreateProjectRequest, ApiResponse, PageResponse } from '../types';
+import { CreateProjectRequest, ApiResponse, PageResponse } from '../types';
 import api, { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
@@ -10,23 +10,29 @@ interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialTitle?: string;
+  initialAbstract?: string;
 }
 
-export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  initialTitle = '',
+  initialAbstract = ''
+}) => {
   const { user } = useAuth();
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
 
   const [formData, setFormData] = useState<CreateProjectRequest>({
-    title: '',
-    abstractText: '',
+    title: initialTitle,
+    abstractText: initialAbstract,
     academicYear: '2025-2026',
     semester: 6,
     projectType: 'CAPSTONE',
     visibility: 'PUBLIC',
-    departmentId: 0,
+    departmentId: 1, // Default to MCA Department
     repositoryUrl: '',
-    guideFacultyId: 2, // Default to Geetha
+    guideFacultyId: 20, // Default to Geetha (Faculty Guide)
   });
 
   const [teamCount, setTeamCount] = useState<number>(1);
@@ -41,7 +47,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
 
   useEffect(() => {
     if (isOpen) {
-      fetchDepartments();
       fetchFaculty();
       if (user) {
         setTeamMembers((prev) => {
@@ -72,23 +77,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       }
     } catch (err) {
       console.log('Using default faculty list:', err);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    setIsLoadingDepartments(true);
-    try {
-      const res = await api.get<ApiResponse<PageResponse<Department>>>('/departments?size=100');
-      if (res.data && res.data.data && res.data.data.content) {
-        setDepartments(res.data.data.content);
-        if (res.data.data.content.length > 0) {
-          setFormData((prev) => ({ ...prev, departmentId: res.data.data.content[0].id }));
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load departments:', err);
-    } finally {
-      setIsLoadingDepartments(false);
     }
   };
 
@@ -186,24 +174,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Department *
+                Department
               </label>
-              <select
-                required
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900 bg-white"
-                value={formData.departmentId}
-                onChange={(e) => setFormData({ ...formData, departmentId: Number(e.target.value) })}
-              >
-                {isLoadingDepartments ? (
-                  <option value={0}>Loading departments...</option>
-                ) : (
-                  departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name} ({dept.code})
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-indigo-900 flex items-center justify-between">
+                <span>Computer Applications (MCA)</span>
+                <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Dept #1</span>
+              </div>
             </div>
 
             <div>

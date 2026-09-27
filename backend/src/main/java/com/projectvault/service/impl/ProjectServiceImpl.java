@@ -24,13 +24,20 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class ProjectServiceImpl implements ProjectService {
@@ -42,9 +49,16 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectWorkflowHistoryRepository projectWorkflowHistoryRepository;
     private final ProjectFileRepository projectFileRepository;
     private final ProjectMapper projectMapper;
+    private final com.projectvault.service.AiPlagiarismService aiPlagiarismService;
+    private final com.projectvault.service.AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
 
     @Value("${projectvault.storage.local-dir:d:/projectvault/storage/projects}")
     private String localStorageDir;
+
+    @Value("${projectvault.ai-service.url:http://localhost:8000}")
+    private String aiServiceUrl;
 
     public ProjectServiceImpl(
             ProjectRepository projectRepository,
@@ -53,7 +67,10 @@ public class ProjectServiceImpl implements ProjectService {
             UserRepository userRepository,
             ProjectWorkflowHistoryRepository projectWorkflowHistoryRepository,
             ProjectFileRepository projectFileRepository,
-            ProjectMapper projectMapper) {
+            ProjectMapper projectMapper,
+            com.projectvault.service.AiPlagiarismService aiPlagiarismService,
+            com.projectvault.service.AuditLogService auditLogService,
+            ObjectMapper objectMapper) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.departmentRepository = departmentRepository;
@@ -61,28 +78,90 @@ public class ProjectServiceImpl implements ProjectService {
         this.projectWorkflowHistoryRepository = projectWorkflowHistoryRepository;
         this.projectFileRepository = projectFileRepository;
         this.projectMapper = projectMapper;
+        this.aiPlagiarismService = aiPlagiarismService;
+        this.auditLogService = auditLogService;
+        this.objectMapper = objectMapper;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(6))
+                .build();
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status, ProjectVisibility visibility, Pageable pageable, UserPrincipal currentUser) {
+        return getAllProjects(departmentId, status, visibility, null, pageable, currentUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status, ProjectVisibility visibility, String query, Pageable pageable, UserPrincipal currentUser) {
+        String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
         Page<Project> page;
 
         if (currentUser == null) {
-            page = projectRepository.findVisitorProjects(departmentId, pageable);
+            page = projectRepository.findVisitorProjects(departmentId, cleanQuery, pageable);
         } else {
             String role = currentUser.getRole();
             if ("ADMIN".equalsIgnoreCase(role)) {
-                page = projectRepository.findAdminProjects(departmentId, status, pageable);
+                page = projectRepository.findAdminProjects(departmentId, status, cleanQuery, pageable);
             } else if ("FACULTY".equalsIgnoreCase(role)) {
-                page = projectRepository.findFacultyProjects(currentUser.getId(), departmentId, status, pageable);
+                page = projectRepository.findFacultyProjects(currentUser.getId(), departmentId, status, cleanQuery, pageable);
             } else {
-                page = projectRepository.findStudentProjects(currentUser.getId(), departmentId, status, pageable);
+                page = projectRepository.findStudentProjects(currentUser.getId(), departmentId, status, cleanQuery, pageable);
             }
         }
 
         Page<ProjectSummaryDto> dtoPage = page.map(projectMapper::toProjectSummaryDto);
         return PageResponse.fromPage(dtoPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProjectSummaryDto> getProjectRecommendations(Long projectId, UserPrincipal currentUser) {
+        if (!projectRepository.existsById(projectId)) {
+            throw new ResourceNotFoundException("Project", "id", projectId);
+        }
+
+        // Attempt AI Microservice semantic similarity recommendation
+        try {
+            String targetUrl = aiServiceUrl + "/api/v1/ai/recommendations/" + projectId + "?limit=5";
+            HttpRequest httpRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(targetUrl))
+                    .timeout(Duration.ofSeconds(6))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode results = root.path("results");
+                if (results.isArray() && results.size() > 0) {
+                    List<ProjectSummaryDto> recList = new ArrayList<>();
+                    for (JsonNode item : results) {
+                        Long recId = item.path("id").asLong();
+                        projectRepository.findById(recId).ifPresent(p -> {
+                            ProjectSummaryDto dto = projectMapper.toProjectSummaryDto(p);
+                            if (item.has("similarity_score")) {
+                                dto.setDuplicationScore(item.path("similarity_score").asDouble());
+                            }
+                            recList.add(dto);
+                        });
+                    }
+                    if (!recList.isEmpty()) {
+                        return recList;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Log and use relational fallback
+        }
+
+        // Fallback: Top 5 approved public projects excluding current
+        List<Project> fallbacks = projectRepository.findTop5ByStatusAndVisibilityAndIdNotOrderByCreatedAtDesc(
+                ProjectStatus.APPROVED, ProjectVisibility.PUBLIC, projectId);
+        return fallbacks.stream()
+                .map(projectMapper::toProjectSummaryDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -187,6 +266,9 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectDetailDto dto = projectMapper.toProjectDetailDto(savedProject, members);
         dto.setWorkflowHistory(List.of(projectMapper.toProjectWorkflowHistoryDto(history)));
         dto.setFiles(List.of());
+
+        auditLogService.logEvent(creator.getId(), "PROJECT_CREATED", "PROJECT", savedProject.getId(), "Created project draft: '" + savedProject.getTitle() + "'", null);
+
         return dto;
     }
 
@@ -255,8 +337,26 @@ public class ProjectServiceImpl implements ProjectService {
         Project updated = projectRepository.save(project);
 
         // Record Workflow History in DB
-        ProjectWorkflowHistory history = new ProjectWorkflowHistory(updated, currentStatus, targetStatus, actor);
+        ProjectWorkflowHistory history = new ProjectWorkflowHistory(updated, currentStatus, targetStatus, actor, request.getFeedback());
         projectWorkflowHistoryRepository.save(history);
+
+        // Automatically trigger AI Plagiarism & Duplication analysis upon submission
+        if (currentStatus == ProjectStatus.DRAFT && targetStatus == ProjectStatus.SUBMITTED) {
+            try {
+                aiPlagiarismService.evaluateProjectPlagiarism(updated);
+            } catch (Exception ex) {
+                // Ensure lifecycle state update succeeds even if external AI call encounters issue
+            }
+        }
+
+        // Automatically trigger AI vector embedding generation upon approval for instant semantic search
+        if (targetStatus == ProjectStatus.APPROVED) {
+            try {
+                aiPlagiarismService.triggerProjectEmbeddingSync(updated.getId());
+            } catch (Exception ex) {
+                // Non-blocking: Ensure approval succeeds even if external AI call encounters issue
+            }
+        }
 
         List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
         ProjectDetailDto dto = projectMapper.toProjectDetailDto(updated, members);
@@ -266,6 +366,10 @@ public class ProjectServiceImpl implements ProjectService {
 
         List<ProjectFile> files = projectFileRepository.findByProjectId(id);
         dto.setFiles(files.stream().map(projectMapper::toProjectFileDto).collect(Collectors.toList()));
+
+        String feedbackInfo = request.getFeedback() != null && !request.getFeedback().isBlank() ? " | Feedback: " + request.getFeedback() : "";
+        auditLogService.logEvent(actor.getId(), "PROJECT_STATUS_TRANSITION", "PROJECT", updated.getId(),
+                "Status transitioned from " + currentStatus + " to " + targetStatus + feedbackInfo, null);
 
         return dto;
     }
@@ -347,6 +451,8 @@ public class ProjectServiceImpl implements ProjectService {
         projectFileRepository.deleteByProjectId(id);
         projectMemberRepository.deleteByProjectId(id);
         projectRepository.delete(project);
+
+        auditLogService.logEvent(currentUser.getId(), "PROJECT_DELETED", "PROJECT", id, "Project entry #" + id + " was deleted", null);
     }
 
     @Override
@@ -389,6 +495,10 @@ public class ProjectServiceImpl implements ProjectService {
             );
 
             ProjectFile savedFile = projectFileRepository.save(projectFile);
+
+            auditLogService.logEvent(currentUser.getId(), "PROJECT_FILE_UPLOADED", "PROJECT_FILE", savedFile.getId(),
+                    "Uploaded file '" + savedFile.getFileName() + "' (" + (savedFile.getFileSize() / 1024) + " KB) for project #" + projectId, null);
+
             return projectMapper.toProjectFileDto(savedFile);
 
         } catch (IOException e) {
@@ -454,5 +564,31 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         projectFileRepository.delete(projectFile);
+
+        auditLogService.logEvent(currentUser.getId(), "PROJECT_FILE_DELETED", "PROJECT_FILE", fileId,
+                "Deleted file '" + projectFile.getFileName() + "' from project #" + projectId, null);
+    }
+
+    @Override
+    @Transactional
+    public ProjectDetailDto triggerPlagiarismCheck(Long id, UserPrincipal currentUser) {
+        if (currentUser == null) {
+            throw new ForbiddenException("Authentication required.");
+        }
+
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
+
+        boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isFaculty = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY"));
+        boolean isCreator = project.getCreatedBy() != null && project.getCreatedBy().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isFaculty && !isCreator) {
+            throw new ForbiddenException("Access denied: You do not have permission to run plagiarism evaluation on this project.");
+        }
+
+        aiPlagiarismService.evaluateProjectPlagiarism(project);
+
+        return getProjectById(id, currentUser);
     }
 }

@@ -18,27 +18,41 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     Page<Project> findByCreatedById(Long createdByUserId, Pageable pageable);
 
     @Query("SELECT p FROM Project p WHERE p.status = com.projectvault.entity.ProjectStatus.APPROVED AND p.visibility = com.projectvault.entity.ProjectVisibility.PUBLIC " +
-           "AND (:departmentId IS NULL OR p.department.id = :departmentId)")
-    Page<Project> findVisitorProjects(@Param("departmentId") Long departmentId, Pageable pageable);
+           "AND (:departmentId IS NULL OR p.department.id = :departmentId) " +
+           "AND (:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.abstractText) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Project> findVisitorProjects(@Param("departmentId") Long departmentId, @Param("query") String query, Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM Project p WHERE " +
            "((p.status = com.projectvault.entity.ProjectStatus.APPROVED AND p.visibility = com.projectvault.entity.ProjectVisibility.PUBLIC) " +
            " OR p.createdBy.id = :studentId " +
            " OR EXISTS (SELECT m FROM ProjectMember m WHERE m.project = p AND m.user.id = :studentId)) " +
            "AND (:departmentId IS NULL OR p.department.id = :departmentId) " +
-           "AND (:status IS NULL OR p.status = :status)")
-    Page<Project> findStudentProjects(@Param("studentId") Long studentId, @Param("departmentId") Long departmentId, @Param("status") ProjectStatus status, Pageable pageable);
+           "AND (:status IS NULL OR p.status = :status) " +
+           "AND (:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.abstractText) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Project> findStudentProjects(@Param("studentId") Long studentId, @Param("departmentId") Long departmentId, @Param("status") ProjectStatus status, @Param("query") String query, Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM Project p WHERE " +
            "((p.status = com.projectvault.entity.ProjectStatus.APPROVED AND p.visibility = com.projectvault.entity.ProjectVisibility.PUBLIC) " +
            " OR (p.guideFaculty IS NOT NULL AND p.guideFaculty.id = :facultyId) " +
            " OR p.createdBy.id = :facultyId) " +
            "AND (:departmentId IS NULL OR p.department.id = :departmentId) " +
-           "AND (:status IS NULL OR p.status = :status)")
-    Page<Project> findFacultyProjects(@Param("facultyId") Long facultyId, @Param("departmentId") Long departmentId, @Param("status") ProjectStatus status, Pageable pageable);
+           "AND (:status IS NULL OR p.status = :status) " +
+           "AND (:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.abstractText) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Project> findFacultyProjects(@Param("facultyId") Long facultyId, @Param("departmentId") Long departmentId, @Param("status") ProjectStatus status, @Param("query") String query, Pageable pageable);
 
     @Query("SELECT p FROM Project p WHERE " +
            "(:departmentId IS NULL OR p.department.id = :departmentId) " +
-           "AND (:status IS NULL OR p.status = :status)")
-    Page<Project> findAdminProjects(@Param("departmentId") Long departmentId, @Param("status") ProjectStatus status, Pageable pageable);
+           "AND (:status IS NULL OR p.status = :status) " +
+           "AND (:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.abstractText) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Project> findAdminProjects(@Param("departmentId") Long departmentId, @Param("status") ProjectStatus status, @Param("query") String query, Pageable pageable);
+
+    java.util.List<Project> findTop5ByStatusAndVisibilityAndIdNotOrderByCreatedAtDesc(ProjectStatus status, ProjectVisibility visibility, Long id);
+
+    long countByStatus(ProjectStatus status);
+
+    @Query("SELECT p.department.name, COUNT(p) FROM Project p GROUP BY p.department.name")
+    java.util.List<Object[]> countProjectsByDepartment();
+
+    @Query("SELECT p.status, COUNT(p) FROM Project p GROUP BY p.status")
+    java.util.List<Object[]> countProjectsByStatus();
 }

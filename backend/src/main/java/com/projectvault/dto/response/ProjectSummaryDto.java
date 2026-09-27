@@ -22,6 +22,10 @@ public class ProjectSummaryDto {
     private String createdByRollNo;
     private Long guideFacultyId;
     private String guideFacultyName;
+    private Double plagiarismScore;
+    private Double duplicationScore;
+    private String plagiarismReport;
+    private String plagiarismStatus;
     private LocalDateTime createdAt;
 
     public ProjectSummaryDto() {}
@@ -169,5 +173,37 @@ public class ProjectSummaryDto {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Double getPlagiarismScore() {
+        return plagiarismScore;
+    }
+
+    public void setPlagiarismScore(Double plagiarismScore) {
+        this.plagiarismScore = plagiarismScore;
+    }
+
+    public Double getDuplicationScore() {
+        return duplicationScore;
+    }
+
+    public void setDuplicationScore(Double duplicationScore) {
+        this.duplicationScore = duplicationScore;
+    }
+
+    public String getPlagiarismReport() {
+        return plagiarismReport;
+    }
+
+    public void setPlagiarismReport(String plagiarismReport) {
+        this.plagiarismReport = plagiarismReport;
+    }
+
+    public String getPlagiarismStatus() {
+        return plagiarismStatus;
+    }
+
+    public void setPlagiarismStatus(String plagiarismStatus) {
+        this.plagiarismStatus = plagiarismStatus;
     }
 }

@@ -36,3 +36,12 @@ class EmbedRequest(BaseModel):
 class SyncEmbeddingsRequest(BaseModel):
     force_refresh: Optional[bool] = Field(False, description="Re-generate embeddings even if already existing")
     project_id: Optional[int] = Field(None, description="Optional single project ID to sync/refresh")
+
+class PlagiarismCheckRequest(BaseModel):
+    project_id: Optional[int] = Field(None, description="Project ID in database")
+    title: str = Field(..., min_length=2, description="Project title")
+    abstract: str = Field(..., min_length=5, description="Project abstract text")
+    document_text: Optional[str] = Field(None, description="Extracted text from attached document(s)")
+    repository_url: Optional[str] = Field(None, description="Project source repository URL")
+    save_to_db: Optional[bool] = Field(True, description="Whether to update projects table with scores")
+
