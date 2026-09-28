@@ -265,9 +265,16 @@ public class ProjectServiceImpl implements ProjectService {
 
         ProjectDetailDto dto = projectMapper.toProjectDetailDto(savedProject, members);
         dto.setWorkflowHistory(List.of(projectMapper.toProjectWorkflowHistoryDto(history)));
-        dto.setFiles(List.of());
-
         auditLogService.logEvent(creator.getId(), "PROJECT_CREATED", "PROJECT", savedProject.getId(), "Created project draft: '" + savedProject.getTitle() + "'", null);
+
+        // Pre-emptive duplication check right at initial draft creation stage
+        try {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    aiPlagiarismService.evaluateProjectPlagiarism(savedProject);
+                } catch (Exception ignored) {}
+            });
+        } catch (Exception ignored) {}
 
         return dto;
     }

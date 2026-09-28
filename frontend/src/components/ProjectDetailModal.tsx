@@ -233,7 +233,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
 
   const handleDelete = async () => {
     const targetId = activeProjectId ?? projectId;
-    if (!targetId || !window.confirm('Are you sure you want to delete this project draft?')) return;
+    const confirmMessage = isAdmin
+      ? 'Are you sure you want to permanently delete this project? This will remove all files, submissions, and workflow history.'
+      : 'Are you sure you want to delete this project draft?';
+    if (!targetId || !window.confirm(confirmMessage)) return;
     try {
       await api.delete(`/projects/${targetId}`);
       onUpdate();
@@ -720,6 +723,20 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                                 : 'Evaluates conceptual overlap with archived project embeddings.'}
                             </div>
 
+                            {/* Multi-Modal Breakdown (Text Vector vs. Code AST) */}
+                            {(parsedReport?.text_similarity_score !== undefined || parsedReport?.code_similarity_score !== undefined) && (
+                              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Text / SRS Vector</span>
+                                  <span className="text-xs font-bold text-slate-700">{parsedReport.text_similarity_score !== undefined ? `${parsedReport.text_similarity_score.toFixed(1)}%` : 'N/A'}</span>
+                                </div>
+                                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Code AST Overlap</span>
+                                  <span className="text-xs font-bold text-slate-700">{parsedReport.code_similarity_score !== undefined ? `${parsedReport.code_similarity_score.toFixed(1)}%` : 'N/A'}</span>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Matched Archived Projects */}
                             {parsedReport?.matched_archived_projects && parsedReport.matched_archived_projects.length > 0 ? (
                               <div className="pt-2 border-t border-slate-100 space-y-1.5">
@@ -747,6 +764,17 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                             )}
                           </div>
                         </div>
+
+                        {/* Critical Repository Clone Alert Banner */}
+                        {parsedReport?.repo_duplicate_detected && (
+                          <div className="rounded-xl p-3 bg-rose-50 border border-rose-300 text-rose-950 flex items-start gap-2.5">
+                            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                            <div className="text-xs space-y-0.5">
+                              <span className="font-bold text-rose-800 block">CRITICAL: 100% Identical Git Codebase Repository Detected!</span>
+                              <span className="text-rose-700">This submission links to a git codebase repository already registered to another vault project, despite differing textual synopsis or SRS documentation.</span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Faculty Recommendation Banner */}
                         {parsedReport?.recommendation_for_faculty && (
@@ -1016,14 +1044,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                       </button>
                     )}
 
-                    {/* Delete Draft Option */}
+                    {/* Delete Option */}
                     {(isAdmin || (isCreator && project.status === 'DRAFT')) && (
                       <button
                         onClick={handleDelete}
                         className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-sm font-semibold transition-colors ml-auto"
+                        title={isAdmin ? "Permanently delete project record as Admin" : "Delete project draft"}
                       >
                         <Trash2 className="w-4 h-4" />
-                        <span>Delete Entry</span>
+                        <span>{isAdmin ? 'Delete Project (Admin)' : 'Delete Draft'}</span>
                       </button>
                     )}
                   </div>

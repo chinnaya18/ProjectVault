@@ -101,7 +101,7 @@ public class ProjectController {
         return ResponseEntity.ok(ApiResponse.success("Project updated successfully", updated));
     }
 
-    @PatchMapping("/{id}/status")
+    @RequestMapping(value = "/{id}/status", method = {RequestMethod.PATCH, RequestMethod.POST})
     @PreAuthorize("hasAnyRole('STUDENT', 'FACULTY', 'ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Transition Project Lifecycle Status", description = "Transitions project status along the state machine: DRAFT -> SUBMITTED -> UNDER_REVIEW -> APPROVED / REJECTED -> ARCHIVED.")

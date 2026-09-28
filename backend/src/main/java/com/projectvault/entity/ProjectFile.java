@@ -24,6 +24,9 @@ public class ProjectFile {
     @Column(name = "file_path", nullable = false, length = 500)
     private String filePath;
 
+    @Column(name = "storage_path", length = 500)
+    private String storagePath;
+
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 
@@ -39,6 +42,7 @@ public class ProjectFile {
         this.fileName = fileName;
         this.fileType = fileType;
         this.filePath = filePath;
+        this.storagePath = filePath;
         this.fileSize = fileSize;
         this.uploadedAt = LocalDateTime.now();
     }
@@ -46,6 +50,9 @@ public class ProjectFile {
     @PrePersist
     protected void onCreate() {
         this.uploadedAt = LocalDateTime.now();
+        if (this.storagePath == null) {
+            this.storagePath = this.filePath;
+        }
     }
 
     // Getters and Setters
@@ -87,6 +94,14 @@ public class ProjectFile {
 
     public void setFilePath(String filePath) {
         this.filePath = filePath;
+    }
+
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public void setStoragePath(String storagePath) {
+        this.storagePath = storagePath;
     }
 
     public Long getFileSize() {

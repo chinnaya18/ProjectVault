@@ -12,6 +12,8 @@ from app.services.embedding_service import embedding_service
 
 logger = logging.getLogger("ai_service.analysis")
 
+from app.services.code_similarity_service import code_similarity_service
+
 class AnalysisService:
 
     async def analyze_project(self, req: AnalyzeProjectRequest) -> AnalyzeProjectResponse:
@@ -128,9 +130,12 @@ class AnalysisService:
         save_to_db: bool = True
     ) -> Dict[str, Any]:
         """
-        Comprehensive AI evaluation:
+        Comprehensive Multi-Modal AI Evaluation:
         1. Internet plagiarism score with intelligent citation / attribution exclusion.
-        2. Internal duplication score against archived / approved projects.
+        2. Internal Multi-Modal duplication scan against vault projects:
+           - Layer A: Vector Cosine Similarity of SRS & Abstract text
+           - Layer B: Canonical Git Repository & Codebase Identity Check
+           - Layer C: Source Code AST & Dependency Structure Analysis
         """
         logger.info(f"Running Plagiarism & Duplication scan for project '{title}' (ID: {project_id})...")
 
@@ -146,11 +151,15 @@ class AnalysisService:
         valid_citations = internet_res.get("valid_citations_detected", [])
         uncited_matches = internet_res.get("uncited_matches", [])
 
-        # 2. Archive Duplication Scan against ProjectVault DB
+        # 2. Multi-Modal Duplication Scan against ProjectVault DB
         matched_archived = []
-        max_similarity = 0.0
+        max_composite_sim = 0.0
+        max_text_sim = 0.0
+        max_code_sim = 0.0
+        repo_duplicate_found = False
+
         try:
-            # Generate vector embedding for submitted content
+            # Generate vector embedding for submitted text content
             query_emb = embedding_service.generate_project_embedding(
                 title=title,
                 abstract=abstract
@@ -158,16 +167,21 @@ class AnalysisService:
 
             with get_db_connection() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    # Query archived projects as well as existing approved public projects
+                    # Query existing projects across ALL lifecycle states (Submitted, Under Review, Approved, Archived, and Drafts with repos)
                     query = """
                         SELECT 
-                            p.id, p.title, p.abstract, p.status, 
+                            p.id, p.title, p.abstract, p.status, p.repository_url, p.created_at,
                             d.name as department_name,
-                            pe.embedding_vector
+                            u.email as author_email,
+                            pe.embedding_vector,
+                            ai.tech_stack
                         FROM projects p
                         LEFT JOIN departments d ON p.department_id = d.id
+                        LEFT JOIN users u ON p.created_by_user_id = u.id
                         LEFT JOIN project_embeddings pe ON p.id = pe.project_id
-                        WHERE (p.status = 'ARCHIVED' OR p.status = 'APPROVED')
+                        LEFT JOIN ai_analyses ai ON p.id = ai.project_id
+                        WHERE (p.status IN ('SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'ARCHIVED') 
+                               OR (p.status = 'DRAFT' AND p.repository_url IS NOT NULL))
                           AND (%s IS NULL OR p.id != %s);
                     """
                     cur.execute(query, (project_id, project_id))
@@ -177,34 +191,70 @@ class AnalysisService:
                         other_id = r["id"]
                         other_title = r["title"]
                         other_status = r["status"]
-                        dept_name = r.get("department_name") or "Engineering"
+                        other_repo = r.get("repository_url")
+                        other_tech = r.get("tech_stack") or []
+                        dept_name = r.get("department_name") or "Computer Applications"
                         emb = r.get("embedding_vector")
 
-                        sim = 0.0
+                        # Layer A: Text Vector Similarity
+                        text_sim = 0.0
                         if emb is not None:
                             if isinstance(emb, str):
                                 cleaned = emb.strip("[]{}").split(",")
                                 emb = [float(x) for x in cleaned if x.strip()]
-                            sim = embedding_service.cosine_similarity(query_emb, list(emb))
+                            text_sim = float(embedding_service.cosine_similarity(query_emb, list(emb)))
                         else:
-                            # Lexical fallback if no embedding stored
                             words1 = set(f"{title} {abstract}".lower().split())
                             words2 = set(f"{other_title} {r['abstract']}".lower().split())
                             intersection = words1.intersection(words2)
-                            sim = len(intersection) / max(len(words1), 1)
+                            text_sim = float(len(intersection) / max(len(words1), 1))
 
-                        if sim > max_similarity:
-                            max_similarity = sim
+                        if text_sim > max_text_sim:
+                            max_text_sim = text_sim
 
-                        # If similarity is significant (> 0.25), record as potential duplication candidate
-                        if sim >= 0.25:
+                        # Layer B: Canonical Git Repository Exact / Fork Match
+                        is_same_repo = code_similarity_service.check_repo_exact_match(repository_url, other_repo)
+                        repo_sim = 1.0 if is_same_repo else 0.0
+                        if is_same_repo:
+                            repo_duplicate_found = True
+                            logger.warning(f"Project '{title}' shares identical repository URL with Project #{other_id} ({other_repo})")
+
+                        # Layer C: Code AST / Dependency Structure Check
+                        code_sim = 0.0
+                        if document_text and len(document_text) > 50:
+                            # Compare code fragments if present in document text
+                            code_sim = code_similarity_service.compare_code_snippets(
+                                document_text,
+                                r.get("abstract", "")
+                            )
+                        if code_sim > max_code_sim:
+                            max_code_sim = code_sim
+
+                        # Layer D: Composite Multi-Modal Similarity
+                        composite_sim = max(text_sim, repo_sim, code_sim)
+                        if composite_sim > max_composite_sim:
+                            max_composite_sim = composite_sim
+
+                        # If similarity is significant, record candidate with detailed diagnostic summary
+                        if composite_sim >= 0.25:
+                            if is_same_repo:
+                                summary = f"CRITICAL: 100% Identical Git Codebase Repository ({other_repo})"
+                            elif code_sim >= 0.70:
+                                summary = f"CRITICAL: Structural Code AST Logic Clone ({round(code_sim * 100, 1)}%) with Project #{other_id}"
+                            elif text_sim >= 0.50:
+                                summary = f"High Conceptual & Abstract Text Overlap ({round(text_sim * 100, 1)}%) with Project #{other_id}"
+                            else:
+                                summary = f"Moderate Topic Overlap ({round(text_sim * 100, 1)}%) with Project #{other_id}"
+
                             matched_archived.append({
                                 "project_id": other_id,
                                 "title": other_title,
-                                "similarity_score": round(float(sim), 4),
+                                "similarity_score": round(float(composite_sim), 4),
+                                "text_similarity": round(float(text_sim), 4),
+                                "repo_match": is_same_repo,
                                 "status": other_status,
                                 "department_name": dept_name,
-                                "similarity_summary": f"High conceptual similarity ({round(sim * 100, 1)}%) with archived project #{other_id}"
+                                "similarity_summary": summary
                             })
 
             matched_archived.sort(key=lambda x: x["similarity_score"], reverse=True)
@@ -214,8 +264,8 @@ class AnalysisService:
             logger.error(f"Error during archive duplication search: {e}")
 
         # Duplication score: scaled from 0.0 to 100.0
-        duplication_score = round(max(0.0, min(100.0, max_similarity * 100.0)), 1)
-        if duplication_score >= 75.0:
+        duplication_score = round(max(0.0, min(100.0, max_composite_sim * 100.0)), 1)
+        if duplication_score >= 75.0 or repo_duplicate_found:
             duplication_verdict = "HIGH_DUPLICATE"
         elif duplication_score >= 40.0:
             duplication_verdict = "PARTIAL_DUPLICATE"
@@ -228,12 +278,19 @@ class AnalysisService:
             "plagiarism_verdict": plagiarism_verdict,
             "duplication_score": duplication_score,
             "duplication_verdict": duplication_verdict,
+            "text_similarity_score": round(max_text_sim * 100.0, 1),
+            "code_similarity_score": round(max_code_sim * 100.0, 1),
+            "repo_duplicate_detected": repo_duplicate_found,
             "internet_sources_detected": internet_res.get("internet_sources_detected", []),
             "valid_citations_detected": valid_citations,
             "uncited_matches": uncited_matches,
             "matched_archived_projects": matched_archived,
             "summary_explanation": internet_res.get("summary_explanation", "Analysis completed."),
-            "recommendation_for_faculty": internet_res.get("recommendation_for_faculty", "Verify citations and technical implementation.")
+            "recommendation_for_faculty": (
+                "CRITICAL WARNING: Identical codebase or repository clone detected with an existing project. Reject or require substantial refactoring."
+                if repo_duplicate_found or duplication_score >= 80.0
+                else internet_res.get("recommendation_for_faculty", "Verify citations and technical implementation.")
+            )
         }
 
         is_persisted = False

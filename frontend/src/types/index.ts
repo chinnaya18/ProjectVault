@@ -96,6 +96,9 @@ export interface PlagiarismReportDetail {
   plagiarism_verdict: string;
   duplication_score: number;
   duplication_verdict: string;
+  text_similarity_score?: number;
+  code_similarity_score?: number;
+  repo_duplicate_detected?: boolean;
   internet_sources_detected?: { source_name?: string; match_percentage?: number; is_properly_cited?: boolean; details?: string }[];
   valid_citations_detected?: { citation_text: string; source_type: string; status: string }[];
   uncited_matches?: string[];

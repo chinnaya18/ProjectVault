@@ -154,8 +154,9 @@ public class AiPlagiarismServiceImpl implements AiPlagiarismService {
                 Path path = Paths.get(file.getFilePath());
                 if (Files.exists(path) && Files.isReadable(path)) {
                     byte[] bytes = Files.readAllBytes(path);
-                    String content = new String(bytes);
-                    return content.length() > 3000 ? content.substring(0, 3000) : content;
+                    String raw = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                    String cleaned = raw.replaceAll("[^\\x20-\\x7E\\r\\n\\t]", " ").replaceAll("\\s+", " ").trim();
+                    return cleaned.length() > 3000 ? cleaned.substring(0, 3000) : cleaned;
                 }
             }
         } catch (Exception e) {
