@@ -56,25 +56,27 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already registered: " + request.getEmail());
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        if (!email.endsWith("@psgtech.ac.in")) {
+            throw new BadRequestException("Registration is restricted to official PSG College of Technology accounts (@psgtech.ac.in).");
         }
 
-        Department department = null;
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("Email is already registered: " + email);
+        }
+
+        Department department = departmentRepository.findById(1L).orElse(null);
         if (request.getDepartmentId() != null) {
-            department = departmentRepository.findById(request.getDepartmentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
+            department = departmentRepository.findById(request.getDepartmentId()).orElse(department);
         }
 
         String rollNo = request.getRollNo();
         if (rollNo == null || rollNo.isBlank()) {
-            if (request.getEmail() != null && request.getEmail().contains("@")) {
-                rollNo = request.getEmail().split("@")[0].toUpperCase();
-            }
+            rollNo = email.split("@")[0].toUpperCase();
         }
 
         User user = new User(
-                request.getEmail(),
+                email,
                 passwordEncoder.encode(request.getPassword()),
                 request.getName(),
                 rollNo,

@@ -13,7 +13,6 @@ import {
   Send,
   FileCheck
 } from 'lucide-react';
-import { formatFacultyName } from '../utils/userFormat';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -83,7 +82,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           .filter((u: any) => u.role === 'FACULTY')
           .map((u: any) => ({
             id: u.id,
-            name: `${formatFacultyName(u.name)} (${u.email})`
+            name: `${u.name} - ${u.rollNo || 'Faculty'} (${u.email})`
           }));
         if (faculties.length > 0) {
           setFacultyList(faculties);

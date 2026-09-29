@@ -1,5 +1,6 @@
 package com.projectvault.service.impl;
 
+import com.projectvault.dto.request.CreateFacultyRequest;
 import com.projectvault.dto.request.UpdateUserRoleRequest;
 import com.projectvault.dto.request.UpdateUserStatusRequest;
 import com.projectvault.dto.response.PageResponse;
@@ -8,9 +9,13 @@ import com.projectvault.entity.Role;
 import com.projectvault.entity.User;
 import com.projectvault.entity.UserStatus;
 import com.projectvault.exception.ResourceNotFoundException;
+import com.projectvault.exception.BadRequestException;
 import com.projectvault.mapper.UserMapper;
 import com.projectvault.repository.UserRepository;
+import com.projectvault.repository.DepartmentRepository;
 import com.projectvault.service.UserService;
+import com.projectvault.service.AuditLogService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,11 +25,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
-    private final com.projectvault.service.AuditLogService auditLogService;
+    private final AuditLogService auditLogService;
 
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, com.projectvault.service.AuditLogService auditLogService) {
+    public UserServiceImpl(
+            UserRepository userRepository,
+            DepartmentRepository departmentRepository,
+            PasswordEncoder passwordEncoder,
+            UserMapper userMapper,
+            AuditLogService auditLogService) {
         this.userRepository = userRepository;
+        this.departmentRepository = departmentRepository;
+        this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.auditLogService = auditLogService;
     }
@@ -53,6 +67,35 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
         return userMapper.toUserSummaryDto(user);
+    }
+
+    @Override
+    @Transactional
+    public UserSummaryDto createFacultyUser(CreateFacultyRequest request) {
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        if (!email.endsWith("@psgtech.ac.in")) {
+            throw new BadRequestException("Faculty email must belong to the @psgtech.ac.in institutional domain.");
+        }
+
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("User email already exists in system: " + email);
+        }
+
+        com.projectvault.entity.Department department = departmentRepository.findById(request.getDepartmentId() != null ? request.getDepartmentId() : 1L)
+                .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
+
+        User user = new User(
+                email,
+                passwordEncoder.encode(request.getPassword() != null && !request.getPassword().isBlank() ? request.getPassword() : "Password@123"),
+                request.getName(),
+                request.getDesignation(),
+                Role.FACULTY,
+                department
+        );
+
+        User saved = userRepository.save(user);
+        auditLogService.logEvent(saved.getId(), "FACULTY_ONBOARDED", "USER", saved.getId(), "Admin onboarded faculty staff: " + saved.getName() + " (" + saved.getEmail() + ")", null);
+        return userMapper.toUserSummaryDto(saved);
     }
 
     @Override

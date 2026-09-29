@@ -57,6 +57,16 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", user));
     }
 
+    @PostMapping("/faculty")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Onboard Faculty Staff", description = "Admin creates a new official faculty staff account in the department.")
+    public ResponseEntity<ApiResponse<UserSummaryDto>> createFaculty(
+            @Valid @RequestBody com.projectvault.dto.request.CreateFacultyRequest request) {
+        UserSummaryDto created = userService.createFacultyUser(request);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(ApiResponse.success("Faculty member onboarded successfully", created));
+    }
+
     @PutMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update User Role", description = "Updates a user's role (ADMIN, FACULTY, STUDENT). Admin access required.")

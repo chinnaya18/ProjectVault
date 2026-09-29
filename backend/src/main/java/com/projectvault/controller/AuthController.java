@@ -46,6 +46,9 @@ public class AuthController {
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Get Current User Profile", description = "Returns details of the currently authenticated user based on JWT.")
     public ResponseEntity<ApiResponse<UserSummaryDto>> getCurrentUser(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        if (userPrincipal == null) {
+            throw new com.projectvault.exception.UnauthorizedException("User is not authenticated. Please log in.");
+        }
         UserSummaryDto userSummary = authService.getCurrentUser(userPrincipal.getId());
         return ResponseEntity.ok(ApiResponse.success("User profile fetched successfully", userSummary));
     }

@@ -41,13 +41,19 @@ export const RegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanEmail = formData.email.trim().toLowerCase();
+    if (!cleanEmail.endsWith('@psgtech.ac.in')) {
+      setError('Registration is restricted to official PSG College of Technology student accounts (@psgtech.ac.in).');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
       await register({
         name: formData.name,
         rollNo: formData.rollNo || undefined,
-        email: formData.email,
+        email: cleanEmail,
         password: formData.password,
         departmentId: formData.departmentId > 0 ? formData.departmentId : undefined,
       });
@@ -114,8 +120,9 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-              Email Address *
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+              <span>College Email Address *</span>
+              <span className="text-[10px] text-indigo-600 font-bold">@psgtech.ac.in only</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -124,12 +131,15 @@ export const RegisterPage: React.FC = () => {
               <input
                 type="email"
                 required
-                placeholder="student@university.edu"
+                placeholder="e.g. 25mx101@psgtech.ac.in"
                 className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Roll number will be automatically extracted from your institutional email prefix.
+            </p>
           </div>
 
           <div>

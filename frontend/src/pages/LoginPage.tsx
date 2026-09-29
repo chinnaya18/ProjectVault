@@ -58,7 +58,7 @@ export const LoginPage: React.FC = () => {
               <input
                 type="email"
                 required
-                placeholder="student@university.edu"
+                placeholder="25mx101@psgtech.ac.in"
                 className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
