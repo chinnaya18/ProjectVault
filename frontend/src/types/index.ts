@@ -23,6 +23,7 @@ export interface User {
   departmentName?: string;
   departmentCode?: string;
   isActive: boolean;
+  mustChangePassword?: boolean;
   createdAt?: string;
 }
 
@@ -160,6 +161,7 @@ export interface CreateProjectRequest {
   visibility: ProjectVisibility;
   departmentId: number;
   repositoryUrl?: string;
+  githubToken?: string;
   guideFacultyId?: number;
   members?: { userId?: number; userEmail?: string; memberRole: string }[];
 }
@@ -282,6 +284,42 @@ export interface AuditLog {
 
 export interface ProjectRecommendation extends ProjectSummary {
   similarityScore?: number;
+}
+
+export interface StudentRosterItem {
+  id: number;
+  rollNo: string;
+  name: string;
+  email: string;
+  batch: string;
+  departmentId?: number;
+  departmentName?: string;
+  isEligible: boolean;
+  isRegistered: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentRosterStats {
+  totalStudents: number;
+  registeredStudents: number;
+  eligibleStudents: number;
+  discontinuedStudents: number;
+}
+
+export interface StudentRosterItemPayload {
+  rollNo: string;
+  name: string;
+  email?: string;
+  batch?: string;
+  departmentId?: number;
+  isEligible?: boolean;
+}
+
+export interface StudentRosterBulkPayload {
+  students: StudentRosterItemPayload[];
+  defaultBatch?: string;
+  defaultDepartmentId?: number;
 }
 
 

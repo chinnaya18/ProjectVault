@@ -11,7 +11,8 @@ import {
   FileText, 
   Trash2, 
   Send,
-  FileCheck
+  FileCheck,
+  Lock
 } from 'lucide-react';
 
 interface CreateProjectModalProps {
@@ -21,6 +22,13 @@ interface CreateProjectModalProps {
   initialTitle?: string;
   initialAbstract?: string;
 }
+
+const getMcaAcademicYear = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0 is January, 5 is June
+  return month >= 5 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+};
 
 export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ 
   isOpen, 
@@ -35,12 +43,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [formData, setFormData] = useState<CreateProjectRequest>({
     title: initialTitle,
     abstractText: initialAbstract,
-    academicYear: '2025-2026',
-    semester: 6,
+    academicYear: getMcaAcademicYear(),
+    semester: 4,
     projectType: 'CAPSTONE',
     visibility: 'PUBLIC',
     departmentId: 1, // Default to MCA Department
     repositoryUrl: '',
+    githubToken: '',
     guideFacultyId: 20, // Default to Geetha (Faculty Guide)
   });
 
@@ -262,16 +271,16 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Semester *
+                Semester (2-Year MCA) *
               </label>
               <select
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900 bg-white"
                 value={formData.semester}
                 onChange={(e) => setFormData({ ...formData, semester: Number(e.target.value) })}
               >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                {[1, 2, 3, 4].map((s) => (
                   <option key={s} value={s}>
-                    Semester {s}
+                    Semester {s} {s <= 2 ? '(First Year MCA)' : '(Second Year MCA - Project)'}
                   </option>
                 ))}
               </select>
@@ -336,8 +345,9 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                GitHub / Git Repository URL
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>GitHub / Git Repository URL</span>
+                <span className="text-slate-400 font-normal lowercase text-[11px]">(public or private)</span>
               </label>
               <input
                 type="url"
@@ -346,6 +356,25 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 value={formData.repositoryUrl || ''}
                 onChange={(e) => setFormData({ ...formData, repositoryUrl: e.target.value })}
               />
+
+              {formData.repositoryUrl && (
+                <div className="mt-2.5 p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900">
+                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Private Repository Code Analysis</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    If this repository is <strong>private</strong>, provide a GitHub Personal Access Token (PAT) with read permission so AI can analyze the code AST structure. Alternatively, you can directly attach your project <strong>.zip file</strong> under Attachments below.
+                  </p>
+                  <input
+                    type="password"
+                    placeholder="GitHub Token: ghp_... (optional for private repos)"
+                    className="w-full px-3 py-1.5 rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono text-slate-800"
+                    value={formData.githubToken || ''}
+                    onChange={(e) => setFormData({ ...formData, githubToken: e.target.value })}
+                  />
+                </div>
+              )}
               <p className="text-xs text-slate-500 mt-1">
                 Note: At least one document attachment (Synopsis/SRS) or repository link is required before submission.
               </p>

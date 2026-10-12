@@ -6,12 +6,12 @@ import { searchProjectsSemantically } from '../api/aiClient';
 import { ProjectDetailModal } from './ProjectDetailModal';
 import { CreateProjectModal } from './CreateProjectModal';
 import { useAuth } from '../context/AuthContext';
-import { 
-  FolderGit2, 
-  Calendar, 
-  User as UserIcon, 
-  Sparkles, 
-  ChevronLeft, 
+import {
+  FolderGit2,
+  Calendar,
+  User as UserIcon,
+  Sparkles,
+  ChevronLeft,
   ChevronRight,
   Award,
   Zap,
@@ -124,13 +124,13 @@ export const PublicLandingPage: React.FC = () => {
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-indigo-100/90 leading-relaxed font-normal">
+            {/* <p className="text-sm sm:text-base text-indigo-100/90 leading-relaxed font-normal">
               Official institutional repository powered by SentenceTransformers dense vector embeddings and pgvector. 
               Search capstone research, distributed architectures, and machine learning models by natural concept, or explore novel academic topic viability.
-            </p>
+            </p> */}
 
             {/* Quick stats banner */}
-            <div className="pt-2 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-indigo-200/80 font-medium">
+            {/* <div className="pt-2 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-indigo-200/80 font-medium">
               <div className="flex items-center space-x-2">
                 <FolderGit2 className="w-4 h-4 text-indigo-400" />
                 <span>50+ Seeded MCA Capstone Projects</span>
@@ -143,7 +143,7 @@ export const PublicLandingPage: React.FC = () => {
                 <Award className="w-4 h-4 text-emerald-400" />
                 <span>Dual Plagiarism & Duplication Engine</span>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>

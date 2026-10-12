@@ -138,4 +138,89 @@ class CodeSimilarityService:
         s2 = {t.strip().lower() for t in list2 if t.strip()}
         return round(self.compute_jaccard_similarity(s1, s2), 4)
 
+    async def fetch_github_repo_content(self, repo_url: str, token: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Fetch source code from a GitHub repository (public or private with Personal Access Token).
+        Extracts representative source files (.py, .java, .js, .ts, .cpp, .cs) for AST analysis.
+        """
+        canonical = self.normalize_repo_url(repo_url)
+        if not canonical or "/" not in canonical:
+            return {"success": False, "error": f"Invalid GitHub repository URL: {repo_url}"}
+
+        owner, repo = canonical.split("/", 1)
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/zipball"
+
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "ProjectVault-MCA-Auditor/2.0"
+        }
+        if token and token.strip():
+            headers["Authorization"] = f"Bearer {token.strip()}"
+
+        try:
+            import httpx
+            import zipfile
+            import io
+
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                res = await client.get(api_url, headers=headers)
+
+                if res.status_code == 200:
+                    code_snippets: List[str] = []
+                    valid_exts = {".py", ".java", ".js", ".ts", ".tsx", ".jsx", ".cpp", ".c", ".cs", ".go", ".php"}
+                    total_bytes = 0
+                    file_count = 0
+
+                    with zipfile.ZipFile(io.BytesIO(res.content)) as z:
+                        for name in z.namelist():
+                            if any(name.lower().endswith(ext) for ext in valid_exts):
+                                if any(ignore in name.lower() for ignore in ["node_modules", "target", "build", "dist", ".git", "venv"]):
+                                    continue
+                                try:
+                                    content = z.read(name).decode("utf-8", errors="ignore")
+                                    if content.strip():
+                                        code_snippets.append(content[:10000]) # cap per file
+                                        total_bytes += len(content)
+                                        file_count += 1
+                                        if file_count >= 50 or total_bytes > 500000:
+                                            break
+                                except Exception:
+                                    continue
+
+                    combined = "\n\n".join(code_snippets)
+                    logger.info(f"Successfully fetched {file_count} source files from GitHub repo {owner}/{repo}")
+                    return {
+                        "success": True,
+                        "owner_repo": f"{owner}/{repo}",
+                        "source_code": combined,
+                        "files_analyzed": file_count,
+                        "is_private": bool(token)
+                    }
+
+                elif res.status_code in (401, 403, 404):
+                    logger.warning(f"GitHub repo {owner}/{repo} returned status {res.status_code}. Private or unauthorized.")
+                    return {
+                        "success": False,
+                        "is_private": True,
+                        "status_code": res.status_code,
+                        "error": (
+                            f"Repository '{owner}/{repo}' is private or inaccessible (Status {res.status_code}). "
+                            "To analyze code from a private repository, provide a GitHub Personal Access Token (PAT) "
+                            "with 'repo:read' permission, or upload the project ZIP archive directly."
+                        )
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": f"GitHub API responded with HTTP status {res.status_code}"
+                    }
+
+        except Exception as ex:
+            logger.error(f"Error fetching GitHub repository {owner}/{repo}: {ex}")
+            return {
+                "success": False,
+                "error": f"Failed to download repository: {str(ex)}"
+            }
+
 code_similarity_service = CodeSimilarityService()
+

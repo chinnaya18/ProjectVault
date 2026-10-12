@@ -31,6 +31,12 @@ export interface AskParams {
 /**
  * Executes a semantic vector search against the ProjectVault AI Microservice.
  */
+const getAiFallbackUrl = (endpoint: string) => {
+  const host = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
+  const port = host === 'localhost' ? ':8000' : ':8000';
+  return `${window.location.protocol}//${host}${port}${endpoint}`;
+};
+
 export const searchProjectsSemantically = async (params: SearchParams): Promise<SemanticSearchResponse> => {
   const payload: any = {
     query: params.query.trim(),
@@ -45,9 +51,8 @@ export const searchProjectsSemantically = async (params: SearchParams): Promise<
     const res = await aiApi.post<SemanticSearchResponse>('/search', payload);
     return res.data;
   } catch (err: any) {
-    // If proxied route fails, attempt direct call to localhost:8000 as resilient fallback
     if (err.code === 'ERR_NETWORK' || err.response?.status === 404) {
-      const directRes = await axios.post<SemanticSearchResponse>('http://localhost:8000/api/ai/search', payload);
+      const directRes = await axios.post<SemanticSearchResponse>(getAiFallbackUrl('/api/ai/search'), payload);
       return directRes.data;
     }
     throw err;
@@ -62,7 +67,7 @@ export const fetchTopicFeedback = async (query: string): Promise<any> => {
     const res = await aiApi.get(`/topic-feedback?query=${encodeURIComponent(query)}`);
     return res.data;
   } catch (err: any) {
-    const directRes = await axios.get(`http://localhost:8000/api/ai/topic-feedback?query=${encodeURIComponent(query)}`);
+    const directRes = await axios.get(getAiFallbackUrl(`/api/ai/topic-feedback?query=${encodeURIComponent(query)}`));
     return directRes.data;
   }
 };
@@ -84,7 +89,7 @@ export const askAiAssistant = async (params: AskParams): Promise<AskQuestionResp
     return res.data;
   } catch (err: any) {
     if (err.code === 'ERR_NETWORK' || err.response?.status === 404) {
-      const directRes = await axios.post<AskQuestionResponse>('http://localhost:8000/api/ai/ask', payload);
+      const directRes = await axios.post<AskQuestionResponse>(getAiFallbackUrl('/api/ai/ask'), payload);
       return directRes.data;
     }
     throw err;
@@ -96,7 +101,7 @@ export const askAiAssistant = async (params: AskParams): Promise<AskQuestionResp
  */
 export const checkAiHealth = async (): Promise<boolean> => {
   try {
-    const res = await axios.get('http://localhost:8000/health', { timeout: 3000 });
+    const res = await axios.get(getAiFallbackUrl('/health'), { timeout: 3000 });
     return res.status === 200;
   } catch {
     return false;

@@ -52,4 +52,69 @@ public class AuthController {
         UserSummaryDto userSummary = authService.getCurrentUser(userPrincipal.getId());
         return ResponseEntity.ok(ApiResponse.success("User profile fetched successfully", userSummary));
     }
+
+    @PostMapping("/request-otp")
+    @Operation(summary = "Request Universal Account OTP", description = "Dispatches a secure 6-digit cryptographic OTP to the registered PSG Tech email for any account (Student, Faculty, or Admin).")
+    public ResponseEntity<ApiResponse<String>> requestUniversalOtp(@Valid @RequestBody com.projectvault.dto.request.FacultyOtpRequest request) {
+        authService.requestOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("A 6-digit verification code has been dispatched to your official PSG Tech email address. Valid for 10 minutes.", "OTP_DISPATCHED"));
+    }
+
+    @PostMapping("/activate")
+    @Operation(summary = "Activate Any Account with OTP", description = "Verifies 6-digit OTP, sets private password, unlocks account, and returns JWT token for any user (Student, Faculty, Admin).")
+    public ResponseEntity<ApiResponse<AuthResponse>> activateAccount(@Valid @RequestBody com.projectvault.dto.request.FacultyActivateRequest request) {
+        AuthResponse response = authService.verifyOtpAndActivate(request.getEmail(), request.getOtp(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Account successfully activated with your private password.", response));
+    }
+
+    @PostMapping("/faculty/request-otp")
+    @Operation(summary = "Request Faculty 1st-Login Activation OTP", description = "Dispatches a secure 6-digit cryptographic OTP to the official @psgtech.ac.in email of the faculty member.")
+    public ResponseEntity<ApiResponse<String>> requestFacultyOtp(@Valid @RequestBody com.projectvault.dto.request.FacultyOtpRequest request) {
+        authService.requestFacultyOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("A 6-digit verification code has been dispatched to your official PSG Tech email address. Valid for 10 minutes.", "OTP_DISPATCHED"));
+    }
+
+    @PostMapping("/faculty/activate")
+    @Operation(summary = "Activate Faculty Account with OTP", description = "Verifies 6-digit OTP, sets private password, unlocks account, and returns JWT.")
+    public ResponseEntity<ApiResponse<AuthResponse>> activateFacultyAccount(@Valid @RequestBody com.projectvault.dto.request.FacultyActivateRequest request) {
+        AuthResponse response = authService.activateFacultyAccount(request.getEmail(), request.getOtp(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Faculty account successfully activated with your private password.", response));
+    }
+
+    @PostMapping("/change-password-otp")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Request Password Change OTP", description = "Dispatches an OTP to the authenticated user's registered college email prior to password update.")
+    public ResponseEntity<ApiResponse<String>> requestPasswordChangeOtp(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        if (userPrincipal == null) {
+            throw new com.projectvault.exception.UnauthorizedException("Authentication required.");
+        }
+        authService.requestOtp(userPrincipal.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("Verification code dispatched to your registered email address.", "OTP_DISPATCHED"));
+    }
+
+    @PostMapping("/change-password-with-otp")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Change Password with Email OTP Verification", description = "Verifies the 6-digit email OTP and updates the account password for any role.")
+    public ResponseEntity<ApiResponse<String>> changePasswordWithOtp(
+            @Valid @RequestBody com.projectvault.dto.request.ChangePasswordOtpRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        if (userPrincipal == null) {
+            throw new com.projectvault.exception.UnauthorizedException("Authentication required.");
+        }
+        authService.changePasswordWithOtp(userPrincipal.getId(), request.getOtp(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Password updated successfully via email OTP verification.", "PASSWORD_UPDATED"));
+    }
+
+    @PostMapping("/change-password")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Change Password", description = "Allows authenticated users to change their account password.")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @Valid @RequestBody com.projectvault.dto.request.ChangePasswordRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        if (userPrincipal == null) {
+            throw new com.projectvault.exception.UnauthorizedException("Authentication required.");
+        }
+        authService.changePassword(userPrincipal.getId(), request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Password updated successfully.", "PASSWORD_UPDATED"));
+    }
 }

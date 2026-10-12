@@ -23,7 +23,8 @@ public class UserMapper {
                 user.getRole(),
                 user.getUserStatus(),
                 deptId,
-                deptName
+                deptName,
+                user.isMustChangePassword()
         );
     }
 }

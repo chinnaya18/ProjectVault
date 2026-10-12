@@ -13,10 +13,15 @@ public class UserSummaryDto {
     private UserStatus userStatus;
     private Long departmentId;
     private String departmentName;
+    private boolean mustChangePassword;
 
     public UserSummaryDto() {}
 
     public UserSummaryDto(Long id, String email, String name, String rollNo, Role role, UserStatus userStatus, Long departmentId, String departmentName) {
+        this(id, email, name, rollNo, role, userStatus, departmentId, departmentName, false);
+    }
+
+    public UserSummaryDto(Long id, String email, String name, String rollNo, Role role, UserStatus userStatus, Long departmentId, String departmentName, boolean mustChangePassword) {
         this.id = id;
         this.email = email;
         this.name = name;
@@ -25,6 +30,7 @@ public class UserSummaryDto {
         this.userStatus = userStatus;
         this.departmentId = departmentId;
         this.departmentName = departmentName;
+        this.mustChangePassword = mustChangePassword;
     }
 
     public Long getId() {
@@ -89,5 +95,13 @@ public class UserSummaryDto {
 
     public void setDepartmentName(String departmentName) {
         this.departmentName = departmentName;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }

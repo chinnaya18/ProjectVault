@@ -21,7 +21,7 @@ public class CreateProjectRequest {
 
     @NotNull(message = "Semester is required")
     @Min(value = 1, message = "Semester must be at least 1")
-    @Max(value = 10, message = "Semester cannot exceed 10")
+    @Max(value = 4, message = "MCA Semester cannot exceed 4 (2-Year MCA Program)")
     private Integer semester;
 
     @NotBlank(message = "Project type is required")
@@ -33,6 +33,8 @@ public class CreateProjectRequest {
     private Long departmentId;
 
     private String repositoryUrl;
+
+    private String githubToken;
 
     private Long guideFacultyId;
 
@@ -116,6 +118,14 @@ public class CreateProjectRequest {
 
     public void setRepositoryUrl(String repositoryUrl) {
         this.repositoryUrl = repositoryUrl;
+    }
+
+    public String getGithubToken() {
+        return githubToken;
+    }
+
+    public void setGithubToken(String githubToken) {
+        this.githubToken = githubToken;
     }
 
     public Long getGuideFacultyId() {

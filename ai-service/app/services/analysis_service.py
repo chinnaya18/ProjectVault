@@ -127,6 +127,7 @@ class AnalysisService:
         abstract: str,
         document_text: Optional[str] = None,
         repository_url: Optional[str] = None,
+        github_token: Optional[str] = None,
         save_to_db: bool = True
     ) -> Dict[str, Any]:
         """
@@ -135,9 +136,19 @@ class AnalysisService:
         2. Internal Multi-Modal duplication scan against vault projects:
            - Layer A: Vector Cosine Similarity of SRS & Abstract text
            - Layer B: Canonical Git Repository & Codebase Identity Check
-           - Layer C: Source Code AST & Dependency Structure Analysis
+           - Layer C: Source Code AST & Dependency Structure Analysis (fetches GitHub repo code if token/URL provided)
         """
         logger.info(f"Running Plagiarism & Duplication scan for project '{title}' (ID: {project_id})...")
+
+        # Ingest source code from GitHub if repository_url provided and document_text is minimal
+        if repository_url and (not document_text or len(document_text) < 100):
+            try:
+                repo_res = await code_similarity_service.fetch_github_repo_content(repository_url, github_token)
+                if repo_res.get("success") and repo_res.get("source_code"):
+                    document_text = repo_res["source_code"]
+                    logger.info(f"Retrieved {repo_res.get('files_analyzed')} source files from repository for AST code analysis")
+            except Exception as e:
+                logger.warning(f"Could not fetch code from repo '{repository_url}': {e}")
 
         # 1. Internet Plagiarism Scan via Gemini (with citation exclusion)
         internet_res = await gemini_service.check_internet_plagiarism(

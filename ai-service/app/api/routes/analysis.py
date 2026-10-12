@@ -61,6 +61,7 @@ async def check_plagiarism(req: PlagiarismCheckRequest) -> PlagiarismCheckRespon
             abstract=req.abstract,
             document_text=req.document_text,
             repository_url=req.repository_url,
+            github_token=req.github_token,
             save_to_db=req.save_to_db if req.save_to_db is not None else True
         )
         return PlagiarismCheckResponse(**res)

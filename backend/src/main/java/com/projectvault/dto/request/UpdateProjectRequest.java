@@ -20,7 +20,7 @@ public class UpdateProjectRequest {
     private String academicYear;
 
     @Min(value = 1, message = "Semester must be at least 1")
-    @Max(value = 10, message = "Semester cannot exceed 10")
+    @Max(value = 4, message = "MCA Semester cannot exceed 4 (2-Year MCA Program)")
     private Integer semester;
 
     private String projectType;

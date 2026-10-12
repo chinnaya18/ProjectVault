@@ -390,8 +390,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                         value={editSemester}
                         onChange={(e) => setEditSemester(Number(e.target.value))}
                       >
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                          <option key={s} value={s}>Semester {s}</option>
+                        {[1, 2, 3, 4].map((s) => (
+                          <option key={s} value={s}>Semester {s} {s <= 2 ? '(First Year MCA)' : '(Second Year MCA)'}</option>
                         ))}
                       </select>
                     </div>

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, LogIn, Lock, Mail, AlertCircle } from 'lucide-react';
+import { BookOpen, LogIn, Lock, Mail, AlertCircle, ShieldCheck } from 'lucide-react';
+import { UniversalOtpModal } from '../components/UniversalOtpModal';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -12,6 +13,7 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,13 +97,33 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="text-center pt-4 border-t border-slate-100 text-sm text-slate-500">
-          Don't have an account yet?{' '}
-          <Link to="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700">
-            Create an account
-          </Link>
+        <div className="text-center pt-4 border-t border-slate-100 text-sm text-slate-500 space-y-2">
+          <div>
+            Don't have an account yet?{' '}
+            <Link to="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700">
+              Create an account
+            </Link>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => setIsOtpModalOpen(true)}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1.5"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>First time login or change password via Email OTP</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      <UniversalOtpModal
+        isOpen={isOtpModalOpen}
+        onClose={() => setIsOtpModalOpen(false)}
+        isFirstLogin={true}
+        initialEmail={email}
+        onSuccess={() => navigate('/')}
+      />
     </div>
   );
 };

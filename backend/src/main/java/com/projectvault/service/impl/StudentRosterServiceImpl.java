@@ -1,0 +1,214 @@
+package com.projectvault.service.impl;
+
+import com.projectvault.dto.request.StudentRosterBulkRequest;
+import com.projectvault.dto.request.StudentRosterItemRequest;
+import com.projectvault.dto.response.PageResponse;
+import com.projectvault.dto.response.StudentRosterDto;
+import com.projectvault.dto.response.StudentRosterStatsDto;
+import com.projectvault.entity.Department;
+import com.projectvault.entity.StudentRoster;
+import com.projectvault.exception.BadRequestException;
+import com.projectvault.exception.ResourceNotFoundException;
+import com.projectvault.repository.DepartmentRepository;
+import com.projectvault.repository.StudentRosterRepository;
+import com.projectvault.service.AuditLogService;
+import com.projectvault.service.StudentRosterService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+
+@Service
+public class StudentRosterServiceImpl implements StudentRosterService {
+
+    private final StudentRosterRepository studentRosterRepository;
+    private final DepartmentRepository departmentRepository;
+    private final AuditLogService auditLogService;
+
+    public StudentRosterServiceImpl(
+            StudentRosterRepository studentRosterRepository,
+            DepartmentRepository departmentRepository,
+            AuditLogService auditLogService) {
+        this.studentRosterRepository = studentRosterRepository;
+        this.departmentRepository = departmentRepository;
+        this.auditLogService = auditLogService;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<StudentRosterDto> getRoster(Long departmentId, String batch, Boolean isEligible, String search, Pageable pageable) {
+        String cleanSearch = (search != null && !search.trim().isBlank()) ? search.trim() : null;
+        String cleanBatch = (batch != null && !batch.trim().isBlank()) ? batch.trim() : null;
+
+        Page<StudentRoster> page = studentRosterRepository.searchRoster(departmentId, cleanBatch, isEligible, cleanSearch, pageable);
+        Page<StudentRosterDto> dtoPage = page.map(this::toDto);
+        return PageResponse.fromPage(dtoPage);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> importBulkRoster(StudentRosterBulkRequest request, Long currentUserId) {
+        if (request.getStudents() == null || request.getStudents().isEmpty()) {
+            throw new BadRequestException("Student list cannot be empty");
+        }
+
+        String defaultBatch = request.getDefaultBatch() != null && !request.getDefaultBatch().isBlank()
+                ? request.getDefaultBatch().trim() : "2025-2027";
+
+        Long defaultDeptId = request.getDefaultDepartmentId() != null ? request.getDefaultDepartmentId() : 1L;
+        Department defaultDepartment = departmentRepository.findById(defaultDeptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Department", "id", defaultDeptId));
+
+        int createdCount = 0;
+        int updatedCount = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (int i = 0; i < request.getStudents().size(); i++) {
+            StudentRosterItemRequest item = request.getStudents().get(i);
+            if (item.getRollNo() == null || item.getRollNo().trim().isBlank()) {
+                errors.add("Row " + (i + 1) + ": Roll number is required.");
+                continue;
+            }
+            if (item.getName() == null || item.getName().trim().isBlank()) {
+                errors.add("Row " + (i + 1) + " (" + item.getRollNo() + "): Student name is required.");
+                continue;
+            }
+
+            String rollNo = item.getRollNo().trim().toUpperCase();
+            String name = item.getName().trim();
+
+            String email = item.getEmail();
+            if (email == null || email.trim().isBlank() || !email.contains("@")) {
+                email = rollNo.toLowerCase() + "@psgtech.ac.in";
+            } else {
+                email = email.trim().toLowerCase();
+            }
+
+            String batch = item.getBatch() != null && !item.getBatch().isBlank()
+                    ? item.getBatch().trim() : defaultBatch;
+
+            Department dept = defaultDepartment;
+            if (item.getDepartmentId() != null && !item.getDepartmentId().equals(defaultDeptId)) {
+                dept = departmentRepository.findById(item.getDepartmentId()).orElse(defaultDepartment);
+            }
+
+            boolean isEligible = item.getIsEligible() != null ? item.getIsEligible() : true;
+
+            Optional<StudentRoster> existingOpt = studentRosterRepository.findByRollNoIgnoreCase(rollNo);
+            if (existingOpt.isPresent()) {
+                StudentRoster existing = existingOpt.get();
+                existing.setName(name);
+                existing.setEmail(email);
+                existing.setBatch(batch);
+                existing.setDepartment(dept);
+                existing.setEligible(isEligible);
+                studentRosterRepository.save(existing);
+                updatedCount++;
+            } else {
+                StudentRoster newRoster = new StudentRoster(
+                        rollNo,
+                        name,
+                        email,
+                        batch,
+                        dept,
+                        isEligible
+                );
+                studentRosterRepository.save(newRoster);
+                createdCount++;
+            }
+        }
+
+        auditLogService.logEvent(
+                currentUserId,
+                "ROSTER_INGEST",
+                "ROSTER",
+                null,
+                String.format("Bulk ingested student roster: %d created, %d updated, %d errors", createdCount, updatedCount, errors.size()),
+                null
+        );
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("created", createdCount);
+        response.put("updated", updatedCount);
+        response.put("totalProcessed", createdCount + updatedCount);
+        response.put("errors", errors);
+        response.put("message", String.format("Successfully ingested %d students (%d created, %d updated).",
+                createdCount + updatedCount, createdCount, updatedCount));
+
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public StudentRosterDto toggleEligibility(Long id, Long currentUserId) {
+        StudentRoster roster = studentRosterRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("StudentRoster", "id", id));
+
+        boolean newStatus = !roster.isEligible();
+        roster.setEligible(newStatus);
+        StudentRoster saved = studentRosterRepository.save(roster);
+
+        auditLogService.logEvent(
+                currentUserId,
+                "ROSTER_STATUS_CHANGE",
+                "ROSTER",
+                saved.getId(),
+                String.format("Toggled student roster eligibility for %s (%s) to %s",
+                        saved.getRollNo(), saved.getName(), newStatus ? "ELIGIBLE" : "DISCONTINUED"),
+                null
+        );
+
+        return toDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteRosterItem(Long id, Long currentUserId) {
+        StudentRoster roster = studentRosterRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("StudentRoster", "id", id));
+
+        if (roster.isRegistered()) {
+            throw new BadRequestException("Cannot delete roster entry for roll number " + roster.getRollNo() + " because this student has already registered an active system account.");
+        }
+
+        studentRosterRepository.delete(roster);
+
+        auditLogService.logEvent(
+                currentUserId,
+                "ROSTER_DELETE",
+                "ROSTER",
+                id,
+                String.format("Removed roll number %s (%s) from nominal roll whitelist", roster.getRollNo(), roster.getName()),
+                null
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StudentRosterStatsDto getStats() {
+        long total = studentRosterRepository.count();
+        long registered = studentRosterRepository.countByIsRegisteredTrue();
+        long eligible = studentRosterRepository.countByIsEligibleTrue();
+        long discontinued = studentRosterRepository.countByIsEligibleFalse();
+
+        return new StudentRosterStatsDto(total, registered, eligible, discontinued);
+    }
+
+    private StudentRosterDto toDto(StudentRoster entity) {
+        return new StudentRosterDto(
+                entity.getId(),
+                entity.getRollNo(),
+                entity.getName(),
+                entity.getEmail(),
+                entity.getBatch(),
+                entity.getDepartment() != null ? entity.getDepartment().getId() : null,
+                entity.getDepartment() != null ? entity.getDepartment().getName() : null,
+                entity.isEligible(),
+                entity.isRegistered(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
+    }
+}

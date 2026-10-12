@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, FolderGit2, Users, LogOut, LogIn, UserPlus, BarChart3, ShieldAlert } from 'lucide-react';
+import { BookOpen, FolderGit2, Users, LogOut, LogIn, UserPlus, BarChart3, ShieldAlert, KeyRound } from 'lucide-react';
 import { formatUserNameByRole } from '../utils/userFormat';
+import { UniversalOtpModal } from './UniversalOtpModal';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState<boolean>(false);
 
   const handleLogout = () => {
     logout();
@@ -106,6 +108,14 @@ export const Navbar: React.FC = () => {
                   </span>
                 </div>
                 <button
+                  onClick={() => setIsOtpModalOpen(true)}
+                  className="flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border border-slate-200"
+                  title="Change Password with Email OTP"
+                >
+                  <KeyRound className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Password</span>
+                </button>
+                <button
                   onClick={handleLogout}
                   className="flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors border border-slate-200"
                   title="Logout"
@@ -135,6 +145,11 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <UniversalOtpModal
+        isOpen={isOtpModalOpen}
+        onClose={() => setIsOtpModalOpen(false)}
+      />
     </header>
   );
 };

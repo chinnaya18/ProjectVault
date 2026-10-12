@@ -43,5 +43,6 @@ class PlagiarismCheckRequest(BaseModel):
     abstract: str = Field(..., min_length=5, description="Project abstract text")
     document_text: Optional[str] = Field(None, description="Extracted text from attached document(s)")
     repository_url: Optional[str] = Field(None, description="Project source repository URL")
+    github_token: Optional[str] = Field(None, description="Optional GitHub Personal Access Token for private repos")
     save_to_db: Optional[bool] = Field(True, description="Whether to update projects table with scores")
 

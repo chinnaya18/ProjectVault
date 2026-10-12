@@ -43,6 +43,10 @@ public class UserPrincipal implements UserDetails {
         return id;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
     public UserStatus getUserStatus() {
         return userStatus;
     }
