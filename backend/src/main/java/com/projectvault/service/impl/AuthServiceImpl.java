@@ -121,6 +121,7 @@ public class AuthServiceImpl implements AuthService {
                 Role.STUDENT,
                 department
         );
+        user.setMustChangePassword(true);
 
         User savedUser = userRepository.save(user);
         auditLogService.logEvent(savedUser.getId(), "USER_REGISTER", "USER", savedUser.getId(), "Student registered account: " + savedUser.getEmail() + " [Roll: " + rollNo + "]", null);
@@ -169,7 +170,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void requestOtp(String email) {
+    public String requestOtp(String email) {
         String cleanEmail = email != null ? email.trim().toLowerCase() : "";
         User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", cleanEmail));
@@ -187,6 +188,8 @@ public class AuthServiceImpl implements AuthService {
 
         auditLogService.logEvent(user.getId(), "OTP_REQUESTED", "USER", user.getId(),
                 "Verification OTP generated and dispatched for: " + cleanEmail + " (" + user.getRole() + ")", null);
+
+        return otp;
     }
 
     @Override
@@ -225,8 +228,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void requestPasswordResetOtp(String email) {
-        requestOtp(email);
+    public String requestPasswordResetOtp(String email) {
+        return requestOtp(email);
     }
 
     @Override
@@ -265,8 +268,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void requestFacultyOtp(String email) {
-        requestOtp(email);
+    public String requestFacultyOtp(String email) {
+        return requestOtp(email);
     }
 
     @Override

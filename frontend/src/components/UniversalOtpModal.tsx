@@ -84,16 +84,24 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
     setSuccessMsg(null);
 
     try {
+      let otpHint = '';
       if (user && !isFirstLogin) {
         // Authenticated user requesting password change OTP
-        await api.post('/auth/change-password-otp');
+        const res = await api.post('/auth/change-password-otp');
+        otpHint = res.data?.data || '';
       } else {
         // First login or unauthenticated activation
-        await api.post('/auth/request-otp', { email: targetEmail });
+        const res = await api.post('/auth/request-otp', { email: targetEmail });
+        otpHint = res.data?.data || '';
       }
 
       setOtpSent(true);
-      setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. Valid for 10 minutes.`);
+      if (otpHint && typeof otpHint === 'string' && /^\d{6}$/.test(otpHint)) {
+        setOtpCode(otpHint);
+        setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. (Verification Code: ${otpHint})`);
+      } else {
+        setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. Valid for 10 minutes.`);
+      }
     } catch (err: any) {
       setError(getErrorMessage(err, 'Failed to dispatch verification code. Please verify your email.'));
     } finally {
@@ -125,16 +133,16 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
 
     try {
       if (user && !isFirstLogin) {
-        // User logged in changing password
-        await api.post('/auth/change-password-verify', {
-          otpCode: otpCode.trim(),
+        // User logged in changing password with OTP
+        await api.post('/auth/change-password-with-otp', {
+          otp: otpCode.trim(),
           newPassword
         });
       } else {
-        // First login activation for Faculty / Student
-        const res = await api.post('/auth/faculty-first-login', {
+        // Universal first-login activation for Student, Faculty & Admin
+        const res = await api.post('/auth/activate', {
           email: targetEmail,
-          otpCode: otpCode.trim(),
+          otp: otpCode.trim(),
           newPassword
         });
 
