@@ -22,7 +22,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
@@ -47,6 +47,7 @@ function AppContent() {
           isOpen={true}
           isFirstLogin={true}
           initialEmail={user.email}
+          onClose={() => logout()}
         />
       )}
     </div>

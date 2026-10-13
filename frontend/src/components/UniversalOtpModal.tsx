@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api, { getErrorMessage } from '../api/client';
 import { 
@@ -10,7 +11,7 @@ import {
   CheckCircle2, 
   AlertCircle, 
   RefreshCw,
-  Eye,
+  Eye, 
   EyeOff
 } from 'lucide-react';
 
@@ -29,7 +30,8 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
   initialEmail = '',
   onSuccess
 }) => {
-  const { user, refreshProfile } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout, refreshProfile } = useAuth();
 
   const [email, setEmail] = useState<string>(initialEmail || user?.email || '');
   const [otpSent, setOtpSent] = useState<boolean>(false);
@@ -41,6 +43,31 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Close handler: logs out if pending password change and redirects straight to landing page
+  const handleClose = () => {
+    if (user?.mustChangePassword) {
+      logout();
+    }
+    if (onClose) {
+      onClose();
+    }
+    navigate('/');
+  };
+
+  // Keyboard navigation & browser history integration
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -98,25 +125,22 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
 
     try {
       if (user && !isFirstLogin) {
-        // Authenticated password update
-        await api.post('/auth/change-password-with-otp', {
-          otp: otpCode.trim(),
-          newPassword: newPassword
+        // User logged in changing password
+        await api.post('/auth/change-password-verify', {
+          otpCode: otpCode.trim(),
+          newPassword
         });
       } else {
-        // First login activation (Student, Faculty, or Admin)
-        const res = await api.post('/auth/activate', {
+        // First login activation for Faculty / Student
+        const res = await api.post('/auth/faculty-first-login', {
           email: targetEmail,
-          otp: otpCode.trim(),
-          newPassword: newPassword
+          otpCode: otpCode.trim(),
+          newPassword
         });
 
-        // If returned token, update storage
-        if (res.data?.data?.accessToken || res.data?.data?.token) {
-          const authData = res.data.data;
-          const token = authData.accessToken || authData.token;
-          localStorage.setItem('pv_token', token);
-          localStorage.setItem('pv_user', JSON.stringify(authData.user));
+        // If returned JWT auth token, store and refresh
+        if (res.data?.data?.accessToken) {
+          localStorage.setItem('auth_token', res.data.data.accessToken);
         }
       }
 
@@ -141,24 +165,26 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
         
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-slate-900 text-white p-6 relative">
-          {onClose && !isFirstLogin && (
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          {/* Universal Close Cross Button */}
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label="Close modal and return"
+            title="Close and return (Esc)"
+            className="absolute top-4 right-4 text-slate-300 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+          <div className="flex items-center gap-3 pr-8">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm shrink-0">
               <ShieldCheck className="w-6 h-6 text-indigo-300" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">
+              <h3 className="text-lg font-bold leading-tight">
                 {isFirstLogin ? 'First-Login Verification' : 'Email OTP Password Security'}
               </h3>
-              <p className="text-xs text-indigo-200">
+              <p className="text-xs text-indigo-200 mt-0.5">
                 PSG Tech MCA Department &bull; Universal Security Protocol
               </p>
             </div>
@@ -166,7 +192,8 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
+
           {isFirstLogin && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs leading-relaxed">
               <strong>Institutional Security Notice:</strong> All accounts (Faculty, Admin & Students) must verify their registered college email via One-Time Password on first login and set a private, confidential password.
@@ -305,6 +332,7 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
               </button>
             </form>
           )}
+
 
         </div>
       </div>
