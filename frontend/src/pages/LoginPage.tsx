@@ -122,7 +122,10 @@ export const LoginPage: React.FC = () => {
         onClose={() => setIsOtpModalOpen(false)}
         isFirstLogin={true}
         initialEmail={email}
-        onSuccess={() => navigate('/')}
+        onSuccess={() => {
+          setIsOtpModalOpen(false);
+          navigate('/');
+        }}
       />
     </div>
   );

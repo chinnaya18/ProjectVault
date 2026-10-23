@@ -11,6 +11,7 @@ interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
+  setAuthSession: (authData: AuthResponse) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -114,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         refreshProfile,
+        setAuthSession: handleAuthSuccess,
       }}
     >
       {children}

@@ -31,7 +31,7 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
   onSuccess
 }) => {
   const navigate = useNavigate();
-  const { user, logout, refreshProfile } = useAuth();
+  const { user, logout, refreshProfile, setAuthSession } = useAuth();
 
   const [email, setEmail] = useState<string>(initialEmail || user?.email || '');
   const [otpSent, setOtpSent] = useState<boolean>(false);
@@ -139,19 +139,25 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
           newPassword
         });
 
-        // If returned JWT auth token, store and refresh
-        if (res.data?.data?.accessToken) {
-          localStorage.setItem('auth_token', res.data.data.accessToken);
+        // Immediately establish full authenticated session in React state & localStorage
+        if (res.data?.data) {
+          setAuthSession(res.data.data);
         }
       }
 
-      setSuccessMsg('Verification successful! Your new confidential password has been set.');
-      await refreshProfile();
+      setSuccessMsg('Verification successful! Entering your dashboard...');
+      if (user) {
+        await refreshProfile();
+      }
 
       setTimeout(() => {
-        if (onSuccess) onSuccess();
-        if (onClose) onClose();
-      }, 1500);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          if (onClose) onClose();
+          navigate('/');
+        }
+      }, 1000);
 
     } catch (err: any) {
       setError(getErrorMessage(err, 'Verification failed. Please check the OTP or request a new code.'));
