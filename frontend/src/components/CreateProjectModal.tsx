@@ -179,8 +179,9 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       setError('Please select a designated Faculty Guide for the project');
       return;
     }
-    if (!formData.repositoryUrl?.trim()) {
-      setError('Git Repository URL is required');
+    const hasFiles = attachedFiles.length > 0;
+    if (!formData.repositoryUrl?.trim() && !hasFiles) {
+      setError('Please provide a Git Repository URL or attach your project documents / source code (.zip) below.');
       return;
     }
 
