@@ -31,6 +31,27 @@ const getMcaAcademicYear = (): string => {
   return month >= 5 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 };
 
+export const DEFAULT_FACULTY_LIST = [
+  { id: 34, name: 'Dr. Ilayaraja N (nir.mca@psgtech.ac.in) - Assistant Professor & Head (i/c)' },
+  { id: 35, name: 'Dr. Manavalan R (vrm.mca@psgtech.ac.in) - Associate Professor' },
+  { id: 36, name: 'Mrs. Kalyani A (akk.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 37, name: 'Dr. Chitra A (ac.mca@psgtech.ac.in) - Professor' },
+  { id: 38, name: 'Dr. Sankar A (dras.mca@psgtech.ac.in) - Professor' },
+  { id: 39, name: 'Dr. Geetha N (sng.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 40, name: 'Dr. Bhama S (sba.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 41, name: 'Dr. Subathra M (msa.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 42, name: 'Mr. Sundar C (csr.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 43, name: 'Dr. Umarani V (vur.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 44, name: 'Mrs. Gowri Thangam J (jgt.mca@psgtech.ac.in) - Assistant Professor (Sr. Gr.)' },
+  { id: 45, name: 'Mrs. Gayathri K (kgi.mca@psgtech.ac.in) - Assistant Professor (Sr. Gr.)' },
+  { id: 46, name: 'Ms. Aruna R (ran.mca@psgtech.ac.in) - Assistant Professor' },
+  { id: 47, name: 'Dr. Venkatesan V (vvn.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 48, name: 'Mrs. Manoranjitham A (amr.mca@psgtech.ac.in) - Assistant Professor (Sl. Gr.)' },
+  { id: 49, name: 'Mrs. Rajeswari N (nrj.mca@psgtech.ac.in) - Assistant Professor (Sr. Gr.)' },
+  { id: 50, name: 'Mrs. Aarthi Mai A S (asa.mca@psgtech.ac.in) - Assistant Professor' },
+  { id: 51, name: 'Dr. Bhuvaneswari A (abh.mca@psgtech.ac.in) - Assistant Professor' },
+];
+
 export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -51,9 +72,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     departmentId: 1, // Default to MCA Department
     repositoryUrl: '',
     githubToken: '',
-    guideFacultyId: 20, // Default to Geetha (Faculty Guide)
+    guideFacultyId: 34, // Default to Dr. Ilayaraja N (HOD i/c)
   });
 
+  const [isPrivateRepo, setIsPrivateRepo] = useState<boolean>(false);
   const [teamCount, setTeamCount] = useState<number>(1);
   const [teamMembers, setTeamMembers] = useState<{ email: string; name: string }[]>([
     { email: user?.email || '', name: user?.name || '' }
@@ -66,7 +88,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [submitStatus, setSubmitStatus] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const [facultyList, setFacultyList] = useState<{ id: number; name: string }[]>([]);
+  const [facultyList, setFacultyList] = useState<{ id: number; name: string }[]>(DEFAULT_FACULTY_LIST);
 
   useEffect(() => {
     if (isOpen) {
@@ -340,19 +362,11 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, guideFacultyId: Number(e.target.value) })}
               >
                 <option value="">Select Designated Faculty Guide</option>
-                {facultyList.length > 0 ? (
-                  facultyList.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value={20}>Ms. Geetha (Faculty Guide)</option>
-                    <option value={21}>Ms. Gayathri (Faculty Guide)</option>
-                    <option value={22}>Mr. Manavalan (Faculty Guide)</option>
-                  </>
-                )}
+                {facultyList.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -366,8 +380,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+            <div className="sm:col-span-2 space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
                 <span>GitHub / Git Repository URL</span>
                 <span className="text-slate-400 font-normal lowercase text-[11px]">(public or private — or attach .zip below)</span>
               </label>
@@ -379,27 +393,57 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, repositoryUrl: e.target.value })}
               />
 
-              {formData.repositoryUrl && (
-                <div className="mt-2.5 p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-amber-900">
-                    <div className="flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Private Repository Code Analysis</span>
-                    </div>
-                    <span className="text-[10px] text-amber-700 font-normal">Fine-Grained PAT / Read-Only</span>
-                  </div>
-                  <p className="text-[11px] text-amber-800 leading-relaxed">
-                    If this repository is <strong>private</strong>, provide a GitHub Personal Access Token (PAT) with read permission so AI can analyze the code AST structure. Alternatively, you can directly attach your project <strong>.zip file</strong> under Attachments below.
-                  </p>
+              {/* Private Repository Toggle */}
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center space-x-2 cursor-pointer text-xs font-semibold text-slate-700 select-none">
                   <input
-                    type="password"
-                    placeholder="GitHub Token: ghp_... (optional for private repos)"
-                    className="w-full px-3 py-1.5 rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono text-slate-800"
-                    value={formData.githubToken || ''}
-                    onChange={(e) => setFormData({ ...formData, githubToken: e.target.value })}
+                    type="checkbox"
+                    checked={isPrivateRepo || Boolean(formData.githubToken)}
+                    onChange={(e) => {
+                      setIsPrivateRepo(e.target.checked);
+                      if (!e.target.checked) setFormData({ ...formData, githubToken: '' });
+                    }}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
                   />
+                  <span className="flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Private Repository (Provide Personal Access Token)</span>
+                  </span>
+                </label>
+                <span className="text-[11px] text-slate-400">Fine-grained token / Read-only</span>
+              </div>
+
+              {/* Private Repository PAT Input Box */}
+              {(isPrivateRepo || Boolean(formData.githubToken) || (formData.repositoryUrl && isPrivateRepo)) && (
+                <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                    <div className="flex items-center gap-1.5">
+                      <Lock className="w-4 h-4 text-amber-600" />
+                      <span>Private Repository Security & Code AST Parsing</span>
+                    </div>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded">PAT Authentication</span>
+                  </div>
+                  <p className="text-xs text-amber-900 leading-relaxed">
+                    Provide a GitHub Personal Access Token (PAT) with read permission. ProjectVault securely downloads the repository zipball directly into memory, strips boilerplate, and computes AST structural code similarity against department records.
+                  </p>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-amber-800 uppercase tracking-wide">
+                      GitHub Personal Access Token (PAT)
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono text-slate-900 placeholder-slate-400"
+                      value={formData.githubToken || ''}
+                      onChange={(e) => setFormData({ ...formData, githubToken: e.target.value })}
+                    />
+                  </div>
+                  <p className="text-[11px] text-amber-700 italic">
+                    Tip: If you prefer not to supply a token, you can leave this blank and attach your source code directly as a <strong>.zip file</strong> under Attachments below.
+                  </p>
                 </div>
               )}
+
               <p className="text-xs text-slate-500 mt-1">
                 Note: At least one document attachment (Synopsis/SRS/.zip) or repository link is required before submission.
               </p>

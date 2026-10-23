@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { 
   User, 
-  Role, 
   UserStatus, 
   ApiResponse, 
   PageResponse, 
@@ -148,21 +147,7 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const handleUpdateRole = async (userId: number, newRole: Role) => {
-    if (currentUser && userId === currentUser.id) {
-      alert("Security Protection: You cannot demote your own active Admin session role.");
-      return;
-    }
-    setError(null);
-    setSuccessMsg(null);
-    try {
-      await api.put(`/users/${userId}/role`, { role: newRole });
-      setSuccessMsg(`Successfully updated user #${userId} role to ${newRole}`);
-      fetchUsers();
-    } catch (err: any) {
-      setError(getErrorMessage(err, 'Failed to update user role'));
-    }
-  };
+
 
   const handleUpdateStatus = async (userId: number, newStatus: UserStatus) => {
     setError(null);
@@ -579,29 +564,12 @@ export const UsersPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right space-x-2">
-                          {/* Role Transition Button */}
-                          {u.role === 'STUDENT' && (
-                            <button
-                              onClick={() => handleUpdateRole(u.id, 'FACULTY')}
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
-                            >
-                              Promote to Faculty
-                            </button>
-                          )}
-                          {u.role === 'FACULTY' && (
-                            <button
-                              onClick={() => handleUpdateRole(u.id, 'STUDENT')}
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                            >
-                              Revert to Student
-                            </button>
-                          )}
-
-                          {/* Status Toggle Button */}
+                          {/* Account Status Management Toggle (Activate / Deactivate) */}
                           {u.userStatus === 'ACTIVE' ? (
                             <button
                               onClick={() => handleUpdateStatus(u.id, 'INACTIVE')}
                               className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
+                              title="Deactivate Account Access"
                             >
                               Deactivate
                             </button>
@@ -609,6 +577,7 @@ export const UsersPage: React.FC = () => {
                             <button
                               onClick={() => handleUpdateStatus(u.id, 'ACTIVE')}
                               className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors"
+                              title="Activate Account Access"
                             >
                               Activate
                             </button>

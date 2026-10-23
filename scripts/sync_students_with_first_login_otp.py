@@ -69,11 +69,11 @@ def sync_students():
         else:
             updated_count += 1
 
-    # 3. Update student_roster is_registered to true for all active accounts
+    # 3. Update student_roster is_registered to true ONLY for students who completed activation (must_change_password = false)
     cur.execute("""
         UPDATE student_roster 
         SET is_registered = true, updated_at = NOW() 
-        WHERE email IN (SELECT email FROM users WHERE role = 'STUDENT');
+        WHERE email IN (SELECT email FROM users WHERE role = 'STUDENT' AND must_change_password = false);
     """)
 
     conn.commit()
