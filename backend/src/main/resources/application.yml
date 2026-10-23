@@ -17,7 +17,7 @@ projectvault:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     expiration-ms: 86400000 # 24 hours
   storage:
-    local-dir: ${STORAGE_LOCAL_DIR:d:/projectvault/storage/projects}
+    local-dir: ${STORAGE_LOCAL_DIR:./storage/projects}
   ai-service:
     url: ${AI_SERVICE_URL:http://localhost:8000}
     timeout-ms: 30000

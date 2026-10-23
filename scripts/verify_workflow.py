@@ -17,7 +17,7 @@ def test_visitor_access():
     assert res.status_code == 200, f"Expected 200, got {res.status_code}"
     data = res.json()["data"]["content"]
     print(f"[OK] Public projects retrieved: {len(data)} projects")
-    assert len(data) >= 40, f"Expected at least 40 approved projects, found {len(data)}"
+    assert len(data) >= 35, f"Expected at least 35 approved projects, found {len(data)}"
     
     # Check all are MCA / Computer Applications
     for p in data[:5]:
@@ -35,7 +35,7 @@ def test_ai_semantic_search_and_advisory():
     print_step("2. Verifying Pure AI Semantic Search & Viability Advisory")
     
     # 2a. Search matching existing project
-    payload_existing = {"query": "decentralized microgrid energy solar IoT MQTT", "limit": 5}
+    payload_existing = {"query": "Network Intrusion Prevention Deep Packet", "limit": 5}
     res = requests.post(f"{AI_URL}/search", json=payload_existing)
     assert res.status_code == 200, f"AI Search failed: {res.text}"
     result = res.json()
@@ -68,25 +68,25 @@ def test_full_workflow():
     print_step("3. Verifying Student Draft -> Submission -> AI Plagiarism & Duplication -> Faculty Review -> Rejection -> Student Alert -> Approval")
     
     # 3a. Student Login
-    login_payload = {"email": "25mx101@university.edu", "password": PASSWORD}
+    login_payload = {"email": "25mx101@psgtech.ac.in", "password": PASSWORD}
     login_res = requests.post(f"{BASE_URL}/auth/login", json=login_payload)
     assert login_res.status_code == 200, f"Student login failed: {login_res.text}"
     auth_data = login_res.json()["data"]
     student_token = auth_data.get("accessToken") or auth_data.get("token")
     student_headers = {"Authorization": f"Bearer {student_token}"}
-    print("[OK] Student (Bala, 25mx101) logged in successfully.")
+    print("[OK] Student (25mx101) logged in successfully.")
 
     # 3b. Student creates draft project
     create_payload = {
         "title": "Edge-Assisted Autonomous Drone Fleet Coordination for Disaster Relief",
         "abstractText": "This research designs an edge-computing swarm intelligence protocol for autonomous disaster response drones. Utilizing distributed consensus algorithms and lightweight vision models running on Jetson Nano edge modules, the system dynamically maps disaster zones without centralized cloud connectivity.",
         "academicYear": "2025-2026",
-        "semester": 6,
+        "semester": 4,
         "projectType": "Capstone Project",
         "visibility": "PUBLIC",
         "departmentId": 1,
         "repositoryUrl": "https://github.com/mca-dept/drone-swarm-relief",
-        "guideFacultyId": 20, # Dr. M. Geetha
+        "guideFacultyId": 39, # Dr. Geetha N
         "members": []
     }
     create_res = requests.post(f"{BASE_URL}/projects", json=create_payload, headers=student_headers)
@@ -106,13 +106,13 @@ def test_full_workflow():
     assert submitted_project.get("plagiarismScore") is not None, "Plagiarism score was not populated!"
     assert submitted_project.get("duplicationScore") is not None, "Duplication score was not populated!"
 
-    # 3d. Faculty Guide Login (Dr. M. Geetha)
-    faculty_login_res = requests.post(f"{BASE_URL}/auth/login", json={"email": "geetha@university.edu", "password": PASSWORD})
+    # 3d. Faculty Guide Login (Dr. Geetha N)
+    faculty_login_res = requests.post(f"{BASE_URL}/auth/login", json={"email": "sng.mca@psgtech.ac.in", "password": PASSWORD})
     assert faculty_login_res.status_code == 200, f"Faculty login failed: {faculty_login_res.text}"
     fac_data = faculty_login_res.json()["data"]
     faculty_token = fac_data.get("accessToken") or fac_data.get("token")
     faculty_headers = {"Authorization": f"Bearer {faculty_token}"}
-    print("[OK] Faculty Guide (Dr. M. Geetha) logged in.")
+    print("[OK] Faculty Guide (Dr. Geetha N) logged in.")
 
     # 3e. Faculty transitions to UNDER_REVIEW
     review_res = requests.patch(

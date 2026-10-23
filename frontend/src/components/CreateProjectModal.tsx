@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CreateProjectRequest, ApiResponse, PageResponse } from '../types';
 import api, { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { formatFacultyName } from '../utils/userFormat';
 import { 
   X, 
   Sparkles, 
@@ -85,13 +86,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
   const fetchFaculty = async () => {
     try {
-      const res = await api.get<ApiResponse<PageResponse<any>>>('/users?size=100');
+      const res = await api.get<ApiResponse<PageResponse<any>>>('/users?role=FACULTY&size=100');
       if (res.data && res.data.data && res.data.data.content) {
         const faculties = res.data.data.content
           .filter((u: any) => u.role === 'FACULTY')
           .map((u: any) => ({
             id: u.id,
-            name: `${u.name} - ${u.rollNo || 'Faculty'} (${u.email})`
+            name: `${formatFacultyName(u.name)} (${u.email})`
           }));
         if (faculties.length > 0) {
           setFacultyList(faculties);
@@ -117,9 +118,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
   const getDocTypeBadge = (filename: string) => {
     const lower = filename.toLowerCase();
+    if (lower.endsWith('.zip') || lower.includes('source') || lower.includes('code')) return { label: 'Source Code Archive (.zip)', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
     if (lower.includes('synopsis')) return { label: 'Synopsis Document', color: 'bg-purple-100 text-purple-800 border-purple-200' };
     if (lower.includes('srs') || lower.includes('requirement')) return { label: 'SRS Specification', color: 'bg-blue-100 text-blue-800 border-blue-200' };
-    if (lower.includes('abstract') || lower.includes('report')) return { label: 'Project Report / Abstract', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+    if (lower.includes('abstract') || lower.includes('report')) return { label: 'Project Report / Abstract', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' };
     return { label: 'Document Attachment', color: 'bg-slate-100 text-slate-700 border-slate-200' };
   };
 
@@ -366,13 +368,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
-                <span>GitHub / Git Repository URL *</span>
-                <span className="text-slate-400 font-normal lowercase text-[11px]">(public or private)</span>
+                <span>GitHub / Git Repository URL</span>
+                <span className="text-slate-400 font-normal lowercase text-[11px]">(public or private — or attach .zip below)</span>
               </label>
               <input
                 type="url"
-                required
-                placeholder="https://github.com/projectvault/smart-irrigation-iot.git"
+                placeholder="https://github.com/projectvault/smart-irrigation-iot.git (optional if .zip is attached)"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900"
                 value={formData.repositoryUrl || ''}
                 onChange={(e) => setFormData({ ...formData, repositoryUrl: e.target.value })}
@@ -380,9 +381,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
               {formData.repositoryUrl && (
                 <div className="mt-2.5 p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900">
-                    <Lock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Private Repository Code Analysis</span>
+                  <div className="flex items-center justify-between text-xs font-semibold text-amber-900">
+                    <div className="flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Private Repository Code Analysis</span>
+                    </div>
+                    <span className="text-[10px] text-amber-700 font-normal">Fine-Grained PAT / Read-Only</span>
                   </div>
                   <p className="text-[11px] text-amber-800 leading-relaxed">
                     If this repository is <strong>private</strong>, provide a GitHub Personal Access Token (PAT) with read permission so AI can analyze the code AST structure. Alternatively, you can directly attach your project <strong>.zip file</strong> under Attachments below.
@@ -397,23 +401,23 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 </div>
               )}
               <p className="text-xs text-slate-500 mt-1">
-                Note: At least one document attachment (Synopsis/SRS) or repository link is required before submission.
+                Note: At least one document attachment (Synopsis/SRS/.zip) or repository link is required before submission.
               </p>
             </div>
           </div>
 
           {/* ============================================================ */}
-          {/* Document Attachments Section (Synopsis, SRS, PDF, DOCX)     */}
+          {/* Document Attachments Section (Synopsis, SRS, PDF, DOCX, ZIP) */}
           {/* ============================================================ */}
           <div className="pt-4 border-t border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <Paperclip className="w-4 h-4 text-indigo-600" />
-                  <span>Project Document Attachments (Synopsis, SRS, Reports)</span>
+                  <span>Project Attachments & Source Code (.zip, Synopsis, SRS)</span>
                 </label>
                 <p className="text-xs text-slate-500">
-                  Attach your project Synopsis, SRS, and specification files (.pdf, .docx, .doc, .txt)
+                  Attach your project Synopsis, SRS, Reports (.pdf, .docx), or Source Code (.zip)
                 </p>
               </div>
               <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
@@ -421,12 +425,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </span>
             </div>
 
-            {/* Hidden File Input */}
+            {/* Hidden File Input allowing ZIP */}
             <input
               type="file"
               ref={fileInputRef}
               multiple
-              accept=".pdf,.doc,.docx,.txt"
+              accept=".pdf,.doc,.docx,.txt,.zip"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -440,10 +444,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 <UploadCloud className="w-5 h-5" />
               </div>
               <div className="text-xs font-bold text-indigo-950">
-                Click to attach Synopsis, SRS, or Abstract documents
+                Click to attach Synopsis, SRS, Report, or Source Code .zip file
               </div>
               <div className="text-[11px] text-slate-500">
-                Supports PDF, DOCX, DOC, TXT (Up to 25MB per file)
+                Supports PDF, DOCX, DOC, TXT, and Source Code ZIP archives (.zip) (Up to 50MB)
               </div>
             </div>
 

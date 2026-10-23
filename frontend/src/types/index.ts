@@ -295,7 +295,9 @@ export interface StudentRosterItem {
   departmentId?: number;
   departmentName?: string;
   isEligible: boolean;
+  eligible?: boolean;
   isRegistered: boolean;
+  registered?: boolean;
   createdAt: string;
   updatedAt: string;
 }

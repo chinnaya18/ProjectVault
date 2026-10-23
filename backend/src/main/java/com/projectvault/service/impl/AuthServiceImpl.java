@@ -215,6 +215,15 @@ public class AuthServiceImpl implements AuthService {
         user.setOtpExpiry(null);
         userRepository.save(user);
 
+        if (user.getRollNo() != null && !user.getRollNo().isBlank()) {
+            studentRosterRepository.findByRollNoIgnoreCase(user.getRollNo().trim()).ifPresent(roster -> {
+                if (!roster.isRegistered()) {
+                    roster.setRegistered(true);
+                    studentRosterRepository.save(roster);
+                }
+            });
+        }
+
         auditLogService.logEvent(user.getId(), "ACCOUNT_ACTIVATED_VIA_OTP", "USER", user.getId(),
                 "Account successfully activated with private password: " + cleanEmail + " (" + user.getRole() + ")", null);
 

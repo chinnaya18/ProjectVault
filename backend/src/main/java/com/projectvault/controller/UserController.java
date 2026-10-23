@@ -32,7 +32,7 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY', 'STUDENT')")
     @Operation(summary = "List Users", description = "Returns a paginated list of system users. Filterable by departmentId, role, or userStatus.")
     public ResponseEntity<ApiResponse<PageResponse<UserSummaryDto>>> getAllUsers(
             @RequestParam(required = false) Long departmentId,

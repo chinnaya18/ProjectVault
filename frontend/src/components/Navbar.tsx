@@ -113,7 +113,7 @@ export const Navbar: React.FC = () => {
                   title="Change Password with Email OTP"
                 >
                   <KeyRound className="w-4 h-4 text-indigo-600" />
-                  <span className="hidden sm:inline">Password</span>
+                  <span className="hidden sm:inline">Change Password</span>
                 </button>
                 <button
                   onClick={handleLogout}

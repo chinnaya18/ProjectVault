@@ -789,77 +789,82 @@ export const UsersPage: React.FC = () => {
                         </td>
                       </tr>
                     ) : (
-                      rosterList.map((item, index) => (
-                        <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-6 py-4 text-xs font-mono text-slate-400">
-                            {rosterPage * 25 + index + 1}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-block px-2.5 py-1 text-xs font-mono font-extrabold bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200">
-                              {item.rollNo}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-semibold text-slate-900">
-                            {item.name}
-                          </td>
-                          <td className="px-6 py-4 text-xs font-mono text-indigo-600">
-                            {item.email}
-                          </td>
-                          <td className="px-6 py-4 text-xs font-medium text-slate-600">
-                            {item.batch}
-                          </td>
-                          <td className="px-6 py-4 text-xs text-slate-500">
-                            {item.departmentName || 'MCA'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                                item.isEligible
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}
-                            >
-                              {item.isEligible ? 'Active / Eligible' : 'Discontinued'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                item.isRegistered
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {item.isRegistered ? 'Registered' : 'Pending Account'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right space-x-2">
-                            {/* Toggle Discontinuation */}
-                            <button
-                              onClick={() => handleToggleEligibility(item.id)}
-                              className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors ${
-                                item.isEligible
-                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-                                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-                              }`}
-                              title={item.isEligible ? 'Mark as Discontinued' : 'Reinstate Eligibility'}
-                            >
-                              {item.isEligible ? 'Discontinue' : 'Reinstate'}
-                            </button>
+                      rosterList.map((item, index) => {
+                        const isEligible = item.isEligible ?? item.eligible ?? true;
+                        const isRegistered = item.isRegistered ?? item.registered ?? false;
 
-                            {/* Delete Unregistered */}
-                            {!item.isRegistered && (
-                              <button
-                                onClick={() => handleDeleteRosterItem(item.id, item.rollNo)}
-                                className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                                title="Remove from Roster"
+                        return (
+                          <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                              {rosterPage * 25 + index + 1}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="inline-block px-2.5 py-1 text-xs font-mono font-extrabold bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200">
+                                {item.rollNo}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 font-semibold text-slate-900">
+                              {item.name}
+                            </td>
+                            <td className="px-6 py-4 text-xs font-mono text-indigo-600">
+                              {item.email}
+                            </td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-600">
+                              {item.batch}
+                            </td>
+                            <td className="px-6 py-4 text-xs text-slate-500">
+                              {item.departmentName || 'MCA'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                  isEligible
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                {isEligible ? 'Active / Eligible' : 'Discontinued'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                  isRegistered
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}
+                              >
+                                {isRegistered ? 'Registered' : 'Pending Account'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right space-x-2">
+                              {/* Toggle Discontinuation */}
+                              <button
+                                onClick={() => handleToggleEligibility(item.id)}
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors ${
+                                  isEligible
+                                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                }`}
+                                title={isEligible ? 'Mark as Discontinued' : 'Reinstate Eligibility'}
+                              >
+                                {isEligible ? 'Discontinue' : 'Reinstate'}
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
+
+                              {/* Delete Unregistered */}
+                              {!isRegistered && (
+                                <button
+                                  onClick={() => handleDeleteRosterItem(item.id, item.rollNo)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                                  title="Remove from Roster"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

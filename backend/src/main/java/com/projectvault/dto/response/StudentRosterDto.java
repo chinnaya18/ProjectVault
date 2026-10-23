@@ -89,7 +89,13 @@ public class StudentRosterDto {
         this.departmentName = departmentName;
     }
 
+    @com.fasterxml.jackson.annotation.JsonProperty("isEligible")
     public boolean isEligible() {
+        return isEligible;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("eligible")
+    public boolean getEligible() {
         return isEligible;
     }
 
@@ -97,7 +103,13 @@ public class StudentRosterDto {
         isEligible = eligible;
     }
 
+    @com.fasterxml.jackson.annotation.JsonProperty("isRegistered")
     public boolean isRegistered() {
+        return isRegistered;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("registered")
+    public boolean getRegistered() {
         return isRegistered;
     }
 
