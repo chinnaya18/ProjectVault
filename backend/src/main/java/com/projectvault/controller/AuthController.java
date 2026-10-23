@@ -56,8 +56,8 @@ public class AuthController {
     @PostMapping("/request-otp")
     @Operation(summary = "Request Universal Account OTP", description = "Dispatches a secure 6-digit cryptographic OTP to the registered PSG Tech email for any account (Student, Faculty, or Admin).")
     public ResponseEntity<ApiResponse<String>> requestUniversalOtp(@Valid @RequestBody com.projectvault.dto.request.FacultyOtpRequest request) {
-        String otp = authService.requestOtp(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.success("A 6-digit verification code has been dispatched to your official PSG Tech email address. (Verification Code: " + otp + ")", otp));
+        authService.requestOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("A 6-digit verification code has been dispatched to your official PSG Tech email address.", "OTP_DISPATCHED"));
     }
 
     @PostMapping("/activate")
@@ -70,8 +70,8 @@ public class AuthController {
     @PostMapping("/faculty/request-otp")
     @Operation(summary = "Request Faculty 1st-Login Activation OTP", description = "Dispatches a secure 6-digit cryptographic OTP to the official @psgtech.ac.in email of the faculty member.")
     public ResponseEntity<ApiResponse<String>> requestFacultyOtp(@Valid @RequestBody com.projectvault.dto.request.FacultyOtpRequest request) {
-        String otp = authService.requestFacultyOtp(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.success("A 6-digit verification code has been dispatched to your official PSG Tech email address. (Verification Code: " + otp + ")", otp));
+        authService.requestFacultyOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("A 6-digit verification code has been dispatched to your official PSG Tech email address.", "OTP_DISPATCHED"));
     }
 
     @PostMapping("/faculty/activate")

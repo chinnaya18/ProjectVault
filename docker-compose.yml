@@ -59,7 +59,7 @@ services:
       DB_NAME: ${DB_NAME:-projectvault}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-0608}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-AQ.Ab8RN6LRKd8H9D4Ewo6jwPdvSb5iePhVv-VdYi8zPdls-lTIVA}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_MODEL: gemini-3.6-flash
       EMBEDDING_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
       EMBEDDING_DIMENSION: 384

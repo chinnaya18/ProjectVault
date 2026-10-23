@@ -341,6 +341,9 @@ public class ProjectServiceImpl implements ProjectService {
         validateStatusTransition(currentStatus, targetStatus, currentUser, project);
 
         project.setStatus(targetStatus);
+        if (targetStatus == ProjectStatus.APPROVED) {
+            project.setVisibility(ProjectVisibility.PUBLIC);
+        }
         Project updated = projectRepository.save(project);
 
         // Record Workflow History in DB

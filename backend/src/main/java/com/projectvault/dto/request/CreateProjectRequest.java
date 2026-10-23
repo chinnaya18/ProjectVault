@@ -27,15 +27,17 @@ public class CreateProjectRequest {
     @NotBlank(message = "Project type is required")
     private String projectType;
 
-    private ProjectVisibility visibility;
+    private ProjectVisibility visibility = ProjectVisibility.PUBLIC;
 
     @NotNull(message = "Department ID is required")
     private Long departmentId;
 
+    @NotBlank(message = "Git repository URL is required")
     private String repositoryUrl;
 
     private String githubToken;
 
+    @NotNull(message = "Designated Faculty Guide is required")
     private Long guideFacultyId;
 
     @Valid

@@ -126,13 +126,37 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent, submitDirectly: boolean = false) => {
-    e.preventDefault();
+    e?.preventDefault();
+    if (!formData.title?.trim()) {
+      setError('Project Title is required');
+      return;
+    }
+    if (!formData.abstractText?.trim()) {
+      setError('Project Abstract summary is required');
+      return;
+    }
+    if (!formData.academicYear?.trim()) {
+      setError('Academic Year is required (e.g. 2025-2026)');
+      return;
+    }
+    if (!formData.semester) {
+      setError('Semester selection is required (Semesters 1-4)');
+      return;
+    }
+    if (!formData.projectType?.trim()) {
+      setError('Project Type is required');
+      return;
+    }
     if (!formData.departmentId) {
       setError('Please select an academic department');
       return;
     }
     if (!formData.guideFacultyId) {
       setError('Please select a designated Faculty Guide for the project');
+      return;
+    }
+    if (!formData.repositoryUrl?.trim()) {
+      setError('Git Repository URL is required');
       return;
     }
 
@@ -142,6 +166,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
     const payload = {
       ...formData,
+      visibility: 'PUBLIC',
       members: teamMembers.slice(0, teamCount).map((_, idx) => ({
         userId: user?.id || 1,
         memberRole: idx === 0 ? 'Project Lead / Author' : `Team Member #${idx + 1}`
@@ -333,24 +358,20 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                 Visibility Scope
               </label>
-              <select
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900 bg-white"
-                value={formData.visibility}
-                onChange={(e) => setFormData({ ...formData, visibility: e.target.value as any })}
-              >
-                <option value="PUBLIC">Public (All Department Students & Faculty)</option>
-                <option value="DEPARTMENT_ONLY">Department Only</option>
-                <option value="PRIVATE">Private Draft</option>
-              </select>
+              <div className="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 text-xs font-semibold text-emerald-800 flex items-center justify-between">
+                <span>Auto-Public upon Faculty Approval</span>
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase">PUBLIC</span>
+              </div>
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
-                <span>GitHub / Git Repository URL</span>
+                <span>GitHub / Git Repository URL *</span>
                 <span className="text-slate-400 font-normal lowercase text-[11px]">(public or private)</span>
               </label>
               <input
                 type="url"
+                required
                 placeholder="https://github.com/projectvault/smart-irrigation-iot.git"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-slate-900"
                 value={formData.repositoryUrl || ''}

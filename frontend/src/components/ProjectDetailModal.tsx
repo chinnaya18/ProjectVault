@@ -413,25 +413,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                        Visibility
-                      </label>
-                      <select
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm text-slate-900 bg-white"
-                        value={editVisibility}
-                        onChange={(e) => setEditVisibility(e.target.value as ProjectVisibility)}
-                      >
-                        <option value="PUBLIC">Public (Accessible worldwide)</option>
-                        <option value="DEPARTMENT_ONLY">Department Only</option>
-                        <option value="PRIVATE">Private (Team only)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                        Repository URL
+                        Git Repository URL
                       </label>
                       <input
                         type="url"

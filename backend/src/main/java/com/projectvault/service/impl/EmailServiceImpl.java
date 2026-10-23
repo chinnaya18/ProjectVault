@@ -30,12 +30,7 @@ public class EmailServiceImpl implements EmailService {
         String cleanEmail = toEmail != null ? toEmail.trim().toLowerCase() : "";
         String displayName = (recipientName != null && !recipientName.isBlank()) ? recipientName : "ProjectVault User";
 
-        logger.info("===============================================================================");
-        logger.info("PSG TECH PROJECTVAULT - OTP DISPATCH FOR: {}", cleanEmail);
-        logger.info("PURPOSE: {} | RECIPIENT: {}", purpose, displayName);
-        logger.info("ONE-TIME PASSWORD (OTP): >>> {} <<<", otpCode);
-        logger.info("VALIDITY: 10 MINUTES");
-        logger.info("===============================================================================");
+        logger.info("PSG Tech ProjectVault: Dispatching verification security OTP email to: {}", cleanEmail);
 
         if (mailSender != null && mailHost != null && !mailHost.trim().isEmpty()) {
             try {
@@ -64,8 +59,12 @@ public class EmailServiceImpl implements EmailService {
                 mailSender.send(message);
                 logger.info("Successfully delivered SMTP OTP email to {}", cleanEmail);
             } catch (Exception ex) {
-                logger.warn("SMTP delivery attempt to {} failed: {}. Logged OTP for console review.", cleanEmail, ex.getMessage());
+                logger.error("SMTP delivery to {} failed: {}", cleanEmail, ex.getMessage());
+                throw new com.projectvault.exception.BadRequestException("Unable to send OTP email: " + ex.getMessage() + ". Please check mail configuration.");
             }
+        } else {
+            logger.error("SMTP Mail Host is not configured. Cannot dispatch email to {}", cleanEmail);
+            throw new com.projectvault.exception.BadRequestException("SMTP Mail Service is not configured on the server. Please contact department administrator.");
         }
     }
 }

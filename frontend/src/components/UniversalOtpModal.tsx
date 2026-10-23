@@ -84,24 +84,17 @@ export const UniversalOtpModal: React.FC<UniversalOtpModalProps> = ({
     setSuccessMsg(null);
 
     try {
-      let otpHint = '';
       if (user && !isFirstLogin) {
         // Authenticated user requesting password change OTP
-        const res = await api.post('/auth/change-password-otp');
-        otpHint = res.data?.data || '';
+        await api.post('/auth/change-password-otp');
       } else {
         // First login or unauthenticated activation
-        const res = await api.post('/auth/request-otp', { email: targetEmail });
-        otpHint = res.data?.data || '';
+        await api.post('/auth/request-otp', { email: targetEmail });
       }
 
       setOtpSent(true);
-      if (otpHint && typeof otpHint === 'string' && /^\d{6}$/.test(otpHint)) {
-        setOtpCode(otpHint);
-        setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. (Verification Code: ${otpHint})`);
-      } else {
-        setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. Valid for 10 minutes.`);
-      }
+      setOtpCode(''); // Keep strictly empty - no autofill for security
+      setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. Please check your email inbox and enter the code below.`);
     } catch (err: any) {
       setError(getErrorMessage(err, 'Failed to dispatch verification code. Please verify your email.'));
     } finally {

@@ -180,9 +180,7 @@ public class AuthServiceImpl implements AuthService {
         user.setOtpExpiry(java.time.LocalDateTime.now().plusMinutes(10));
         userRepository.save(user);
 
-        logger.info("=================================================================");
-        logger.info("INSTITUTIONAL SECURITY OTP FOR [{} ({})]: {}", cleanEmail, user.getRole(), otp);
-        logger.info("=================================================================");
+        logger.info("PSG Tech ProjectVault: Institutional security OTP generated for [{} ({})]. Dispatching via official email service.", cleanEmail, user.getRole());
 
         emailService.sendOtpEmail(cleanEmail, otp, "Account Verification / Password Security", user.getName());
 
