@@ -350,13 +350,16 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectWorkflowHistory history = new ProjectWorkflowHistory(updated, currentStatus, targetStatus, actor, request.getFeedback());
         projectWorkflowHistoryRepository.save(history);
 
-        // Automatically trigger AI Plagiarism & Duplication analysis upon submission
+        // Automatically trigger AI Plagiarism & Duplication analysis upon submission asynchronously
         if (currentStatus == ProjectStatus.DRAFT && targetStatus == ProjectStatus.SUBMITTED) {
-            try {
-                aiPlagiarismService.evaluateProjectPlagiarism(updated);
-            } catch (Exception ex) {
-                // Ensure lifecycle state update succeeds even if external AI call encounters issue
-            }
+            final Project projForAi = updated;
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    aiPlagiarismService.evaluateProjectPlagiarism(projForAi);
+                } catch (Exception ex) {
+                    logger.warn("Asynchronous plagiarism scan encountered issue: {}", ex.getMessage());
+                }
+            });
         }
 
         // Automatically trigger AI vector embedding generation upon approval for instant semantic search

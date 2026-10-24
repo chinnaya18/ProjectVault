@@ -51,7 +51,7 @@ public class AiPlagiarismServiceImpl implements AiPlagiarismService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void evaluateProjectPlagiarism(Project project) {
         if (project == null || project.getId() == null) {
             return;
