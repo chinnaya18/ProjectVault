@@ -10,7 +10,9 @@ public class StudentRosterDto {
     private String batch;
     private Long departmentId;
     private String departmentName;
+    @com.fasterxml.jackson.annotation.JsonProperty("isEligible")
     private boolean isEligible;
+    @com.fasterxml.jackson.annotation.JsonProperty("isRegistered")
     private boolean isRegistered;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -94,13 +96,9 @@ public class StudentRosterDto {
         return isEligible;
     }
 
-    @com.fasterxml.jackson.annotation.JsonProperty("eligible")
-    public boolean getEligible() {
-        return isEligible;
-    }
-
+    @com.fasterxml.jackson.annotation.JsonProperty("isEligible")
     public void setEligible(boolean eligible) {
-        isEligible = eligible;
+        this.isEligible = eligible;
     }
 
     @com.fasterxml.jackson.annotation.JsonProperty("isRegistered")
@@ -108,13 +106,9 @@ public class StudentRosterDto {
         return isRegistered;
     }
 
-    @com.fasterxml.jackson.annotation.JsonProperty("registered")
-    public boolean getRegistered() {
-        return isRegistered;
-    }
-
+    @com.fasterxml.jackson.annotation.JsonProperty("isRegistered")
     public void setRegistered(boolean registered) {
-        isRegistered = registered;
+        this.isRegistered = registered;
     }
 
     public LocalDateTime getCreatedAt() {
