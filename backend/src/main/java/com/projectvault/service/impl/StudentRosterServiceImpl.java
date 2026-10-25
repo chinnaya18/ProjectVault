@@ -220,12 +220,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
             throw new BadRequestException("Batch name is required to purge batch records.");
         }
         String cleanBatch = batch.trim();
-        List<StudentRoster> batchStudents;
-        if (departmentId != null) {
-            batchStudents = studentRosterRepository.findByBatchIgnoreCaseAndDepartmentId(cleanBatch, departmentId);
-        } else {
-            batchStudents = studentRosterRepository.findByBatchIgnoreCase(cleanBatch);
-        }
+        List<StudentRoster> batchStudents = studentRosterRepository.findByBatchOrRollPrefix(cleanBatch);
 
         int deletedCount = 0;
         int preservedCount = 0;

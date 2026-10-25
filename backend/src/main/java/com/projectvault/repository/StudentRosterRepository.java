@@ -21,6 +21,11 @@ public interface StudentRosterRepository extends JpaRepository<StudentRoster, Lo
     List<StudentRoster> findByBatchIgnoreCaseAndDepartmentId(String batch, Long departmentId);
 
     @Query("SELECT r FROM StudentRoster r WHERE " +
+           "LOWER(r.batch) = LOWER(:batch) OR " +
+           "LOWER(r.rollNo) LIKE LOWER(CONCAT(:batch, '%'))")
+    List<StudentRoster> findByBatchOrRollPrefix(@Param("batch") String batch);
+
+    @Query("SELECT r FROM StudentRoster r WHERE " +
            "(:departmentId IS NULL OR r.department.id = :departmentId) AND " +
            "(:batch IS NULL OR r.batch = :batch) AND " +
            "(:isEligible IS NULL OR r.isEligible = :isEligible) AND " +
