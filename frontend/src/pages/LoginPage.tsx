@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, LogIn, Lock, Mail, AlertCircle, ShieldCheck } from 'lucide-react';
@@ -97,21 +97,20 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="text-center pt-4 border-t border-slate-100 text-sm text-slate-500 space-y-2">
-          <div>
-            Don't have an account yet?{' '}
-            <Link to="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700">
-              Create an account
-            </Link>
+        <div className="pt-4 border-t border-slate-100 space-y-3">
+          <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-900 leading-relaxed text-left">
+            <span className="font-semibold block mb-0.5 text-indigo-950">PSG Tech Nominal Roll Whitelist</span>
+            Student accounts are officially provisioned via the MCA Department Roster. 
+            If you are logging in for the first time or need to set your password, use the OTP verification below.
           </div>
           <div>
             <button
               type="button"
               onClick={() => setIsOtpModalOpen(true)}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1.5"
+              className="w-full py-2.5 px-4 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors inline-flex items-center justify-center gap-1.5 shadow-2xs"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>First time login or change password via Email OTP</span>
+              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              <span>First time login / Activate or change password via OTP</span>
             </button>
           </div>
         </div>

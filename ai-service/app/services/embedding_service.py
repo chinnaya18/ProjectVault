@@ -1,3 +1,4 @@
+import os
 import logging
 import numpy as np
 from typing import List, Optional, Union
@@ -61,16 +62,43 @@ class EmbeddingService:
         return " ".join(expanded_tokens) if has_expansion else query
 
     def load_model(self) -> None:
-        """Load the SentenceTransformer model once into memory."""
+        """Load the SentenceTransformer model once into memory with offline fallbacks."""
         if self._model is None:
             model_name = settings.EMBEDDING_MODEL_NAME
-            logger.info(f"Loading SentenceTransformer model '{model_name}'...")
-            try:
-                self._model = SentenceTransformer(model_name)
-                logger.info(f"SentenceTransformer model '{model_name}' successfully loaded.")
-            except Exception as e:
-                logger.error(f"Failed to load SentenceTransformer model '{model_name}': {e}")
-                raise e
+            
+            # Check local candidate paths (in case model was transferred manually as files)
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            candidate_paths = [
+                os.path.join(base_dir, "models", "all-MiniLM-L6-v2"),
+                os.path.join(base_dir, "models"),
+                os.path.join(base_dir, "all-MiniLM-L6-v2")
+            ]
+            
+            loaded = False
+            for path in candidate_paths:
+                if os.path.exists(path) and os.path.isdir(path):
+                    try:
+                        logger.info(f"Checking local offline SentenceTransformer model path: '{path}'...")
+                        self._model = SentenceTransformer(path)
+                        logger.info(f"SentenceTransformer successfully loaded from local path: '{path}'.")
+                        loaded = True
+                        break
+                    except Exception as e:
+                        logger.warning(f"Could not load from candidate path '{path}': {e}")
+
+            if not loaded:
+                logger.info(f"Loading SentenceTransformer model '{model_name}'...")
+                try:
+                    self._model = SentenceTransformer(model_name)
+                    logger.info(f"SentenceTransformer model '{model_name}' successfully loaded.")
+                except Exception as e:
+                    logger.warning(f"Standard download/load for '{model_name}' failed: {e}. Trying local cache...")
+                    try:
+                        self._model = SentenceTransformer(model_name, local_files_only=True)
+                        logger.info("SentenceTransformer successfully loaded from local HuggingFace cache.")
+                    except Exception as cache_err:
+                        logger.error(f"Failed to load SentenceTransformer even from cache: {cache_err}")
+                        raise e
 
     @property
     def model(self) -> SentenceTransformer:

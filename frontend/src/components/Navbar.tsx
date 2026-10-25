@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, FolderGit2, Users, LogOut, LogIn, UserPlus, BarChart3, ShieldAlert, KeyRound } from 'lucide-react';
+import { BookOpen, FolderGit2, Users, LogOut, LogIn, BarChart3, ShieldAlert, KeyRound } from 'lucide-react';
 import { formatUserNameByRole } from '../utils/userFormat';
 import { UniversalOtpModal } from './UniversalOtpModal';
 
@@ -140,17 +140,10 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Link
                   to="/login"
-                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs whitespace-nowrap"
                 >
                   <LogIn className="w-4 h-4" />
                   <span>Login</span>
-                </Link>
-                <Link
-                  to="/signup"
-                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs whitespace-nowrap"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Signup</span>
                 </Link>
               </div>
             )}
