@@ -88,13 +88,15 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status, ProjectVisibility visibility, Pageable pageable, UserPrincipal currentUser) {
+    public PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status,
+            ProjectVisibility visibility, Pageable pageable, UserPrincipal currentUser) {
         return getAllProjects(departmentId, status, visibility, null, pageable, currentUser);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status, ProjectVisibility visibility, String query, Pageable pageable, UserPrincipal currentUser) {
+    public PageResponse<ProjectSummaryDto> getAllProjects(Long departmentId, ProjectStatus status,
+            ProjectVisibility visibility, String query, Pageable pageable, UserPrincipal currentUser) {
         String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
         Page<Project> page;
 
@@ -105,9 +107,11 @@ public class ProjectServiceImpl implements ProjectService {
             if ("ADMIN".equalsIgnoreCase(role)) {
                 page = projectRepository.findAdminProjects(departmentId, status, cleanQuery, pageable);
             } else if ("FACULTY".equalsIgnoreCase(role)) {
-                page = projectRepository.findFacultyProjects(currentUser.getId(), departmentId, status, cleanQuery, pageable);
+                page = projectRepository.findFacultyProjects(currentUser.getId(), departmentId, status, cleanQuery,
+                        pageable);
             } else {
-                page = projectRepository.findStudentProjects(currentUser.getId(), departmentId, status, cleanQuery, pageable);
+                page = projectRepository.findStudentProjects(currentUser.getId(), departmentId, status, cleanQuery,
+                        pageable);
             }
         }
 
@@ -178,13 +182,16 @@ public class ProjectServiceImpl implements ProjectService {
 
             String role = currentUser.getRole();
             if (!"ADMIN".equalsIgnoreCase(role)) {
-                boolean isCreator = project.getCreatedBy() != null && project.getCreatedBy().getId().equals(currentUser.getId());
-                boolean isGuide = project.getGuideFaculty() != null && project.getGuideFaculty().getId().equals(currentUser.getId());
+                boolean isCreator = project.getCreatedBy() != null
+                        && project.getCreatedBy().getId().equals(currentUser.getId());
+                boolean isGuide = project.getGuideFaculty() != null
+                        && project.getGuideFaculty().getId().equals(currentUser.getId());
                 boolean isMember = projectMemberRepository.findByProjectId(id).stream()
                         .anyMatch(m -> m.getUser() != null && m.getUser().getId().equals(currentUser.getId()));
 
                 if (!isCreator && !isGuide && !isMember) {
-                    throw new ForbiddenException("Access denied: You do not have permission to view this non-approved project.");
+                    throw new ForbiddenException(
+                            "Access denied: You do not have permission to view this non-approved project.");
                 }
             }
         }
@@ -193,7 +200,8 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectDetailDto dto = projectMapper.toProjectDetailDto(project, members);
 
         // Fetch DB Workflow History
-        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository.findByProjectIdOrderByCreatedAtAsc(id);
+        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository
+                .findByProjectIdOrderByCreatedAtAsc(id);
         List<ProjectWorkflowHistoryDto> historyDtos = histories.stream()
                 .map(projectMapper::toProjectWorkflowHistoryDto)
                 .collect(Collectors.toList());
@@ -231,8 +239,7 @@ public class ProjectServiceImpl implements ProjectService {
                 request.getVisibility(),
                 department,
                 creator,
-                request.getRepositoryUrl()
-        );
+                request.getRepositoryUrl());
 
         if (request.getGuideFacultyId() != null) {
             User guide = userRepository.findById(request.getGuideFacultyId()).orElse(null);
@@ -246,7 +253,8 @@ public class ProjectServiceImpl implements ProjectService {
         projectMemberRepository.save(leadMember);
 
         // Record initial creation in DB Workflow History
-        ProjectWorkflowHistory history = new ProjectWorkflowHistory(savedProject, ProjectStatus.DRAFT, ProjectStatus.DRAFT, creator);
+        ProjectWorkflowHistory history = new ProjectWorkflowHistory(savedProject, ProjectStatus.DRAFT,
+                ProjectStatus.DRAFT, creator);
         projectWorkflowHistoryRepository.save(history);
 
         List<ProjectMember> members = new ArrayList<>();
@@ -265,16 +273,19 @@ public class ProjectServiceImpl implements ProjectService {
 
         ProjectDetailDto dto = projectMapper.toProjectDetailDto(savedProject, members);
         dto.setWorkflowHistory(List.of(projectMapper.toProjectWorkflowHistoryDto(history)));
-        auditLogService.logEvent(creator.getId(), "PROJECT_CREATED", "PROJECT", savedProject.getId(), "Created project draft: '" + savedProject.getTitle() + "'", null);
+        auditLogService.logEvent(creator.getId(), "PROJECT_CREATED", "PROJECT", savedProject.getId(),
+                "Created project draft: '" + savedProject.getTitle() + "'", null);
 
         // Pre-emptive duplication check right at initial draft creation stage
         try {
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     aiPlagiarismService.evaluateProjectPlagiarism(savedProject);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         return dto;
     }
@@ -296,25 +307,35 @@ public class ProjectServiceImpl implements ProjectService {
             throw new ForbiddenException("You are not authorized to edit this project.");
         }
 
-        if (isCreator && !isAdmin && project.getStatus() != ProjectStatus.DRAFT && project.getStatus() != ProjectStatus.REJECTED) {
+        if (isCreator && !isAdmin && project.getStatus() != ProjectStatus.DRAFT
+                && project.getStatus() != ProjectStatus.REJECTED) {
             throw new BadRequestException("Projects can only be edited when in DRAFT or REJECTED status.");
         }
 
-        if (request.getTitle() != null) project.setTitle(request.getTitle());
-        if (request.getAbstractText() != null) project.setAbstractText(request.getAbstractText());
-        if (request.getAcademicYear() != null) project.setAcademicYear(request.getAcademicYear());
-        if (request.getSemester() != null) project.setSemester(request.getSemester());
-        if (request.getProjectType() != null) project.setProjectType(request.getProjectType());
-        if (request.getVisibility() != null) project.setVisibility(request.getVisibility());
-        if (request.getRepositoryUrl() != null) project.setRepositoryUrl(request.getRepositoryUrl());
+        if (request.getTitle() != null)
+            project.setTitle(request.getTitle());
+        if (request.getAbstractText() != null)
+            project.setAbstractText(request.getAbstractText());
+        if (request.getAcademicYear() != null)
+            project.setAcademicYear(request.getAcademicYear());
+        if (request.getSemester() != null)
+            project.setSemester(request.getSemester());
+        if (request.getProjectType() != null)
+            project.setProjectType(request.getProjectType());
+        if (request.getVisibility() != null)
+            project.setVisibility(request.getVisibility());
+        if (request.getRepositoryUrl() != null)
+            project.setRepositoryUrl(request.getRepositoryUrl());
 
         Project updated = projectRepository.save(project);
         List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
 
         ProjectDetailDto dto = projectMapper.toProjectDetailDto(updated, members);
 
-        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository.findByProjectIdOrderByCreatedAtAsc(id);
-        dto.setWorkflowHistory(histories.stream().map(projectMapper::toProjectWorkflowHistoryDto).collect(Collectors.toList()));
+        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository
+                .findByProjectIdOrderByCreatedAtAsc(id);
+        dto.setWorkflowHistory(
+                histories.stream().map(projectMapper::toProjectWorkflowHistoryDto).collect(Collectors.toList()));
 
         List<ProjectFile> files = projectFileRepository.findByProjectId(id);
         dto.setFiles(files.stream().map(projectMapper::toProjectFileDto).collect(Collectors.toList()));
@@ -324,7 +345,8 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional
-    public ProjectDetailDto transitionProjectStatus(Long id, ProjectStatusTransitionRequest request, UserPrincipal currentUser) {
+    public ProjectDetailDto transitionProjectStatus(Long id, ProjectStatusTransitionRequest request,
+            UserPrincipal currentUser) {
         if (currentUser == null) {
             throw new ForbiddenException("Authentication required.");
         }
@@ -347,47 +369,53 @@ public class ProjectServiceImpl implements ProjectService {
         Project updated = projectRepository.save(project);
 
         // Record Workflow History in DB
-        ProjectWorkflowHistory history = new ProjectWorkflowHistory(updated, currentStatus, targetStatus, actor, request.getFeedback());
+        ProjectWorkflowHistory history = new ProjectWorkflowHistory(updated, currentStatus, targetStatus, actor,
+                request.getFeedback());
         projectWorkflowHistoryRepository.save(history);
 
-        // Automatically trigger AI Plagiarism & Duplication analysis upon submission asynchronously
+        // Automatically trigger AI Plagiarism & Duplication analysis upon submission
         if (currentStatus == ProjectStatus.DRAFT && targetStatus == ProjectStatus.SUBMITTED) {
-            final Project projForAi = updated;
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                try {
-                    aiPlagiarismService.evaluateProjectPlagiarism(projForAi);
-                } catch (Exception ex) {
-                    logger.warn("Asynchronous plagiarism scan encountered issue: {}", ex.getMessage());
-                }
-            });
+            try {
+                aiPlagiarismService.evaluateProjectPlagiarism(updated);
+            } catch (Exception ex) {
+                // Ensure lifecycle state update succeeds even if external AI call encounters
+                // issue
+            }
         }
 
-        // Automatically trigger AI vector embedding generation upon approval for instant semantic search
+        // Automatically trigger AI vector embedding generation upon approval for
+        // instant semantic search
         if (targetStatus == ProjectStatus.APPROVED) {
             try {
                 aiPlagiarismService.triggerProjectEmbeddingSync(updated.getId());
             } catch (Exception ex) {
-                // Non-blocking: Ensure approval succeeds even if external AI call encounters issue
+                // Non-blocking: Ensure approval succeeds even if external AI call encounters
+                // issue
             }
         }
 
         List<ProjectMember> members = projectMemberRepository.findByProjectId(id);
         ProjectDetailDto dto = projectMapper.toProjectDetailDto(updated, members);
 
-        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository.findByProjectIdOrderByCreatedAtAsc(id);
-        dto.setWorkflowHistory(histories.stream().map(projectMapper::toProjectWorkflowHistoryDto).collect(Collectors.toList()));
+        List<ProjectWorkflowHistory> histories = projectWorkflowHistoryRepository
+                .findByProjectIdOrderByCreatedAtAsc(id);
+        dto.setWorkflowHistory(
+                histories.stream().map(projectMapper::toProjectWorkflowHistoryDto).collect(Collectors.toList()));
 
         List<ProjectFile> files = projectFileRepository.findByProjectId(id);
         dto.setFiles(files.stream().map(projectMapper::toProjectFileDto).collect(Collectors.toList()));
 
-        String feedbackInfo = request.getFeedback() != null && !request.getFeedback().isBlank() ? " | Feedback: " + request.getFeedback() : "";
+        String feedbackInfo = request.getFeedback() != null && !request.getFeedback().isBlank()
+                ? " | Feedback: " + request.getFeedback()
+                : "";
         auditLogService.logEvent(actor.getId(), "PROJECT_STATUS_TRANSITION", "PROJECT", updated.getId(),
                 "Status transitioned from " + currentStatus + " to " + targetStatus + feedbackInfo, null);
 
         return dto;
     }
 
-    private void validateStatusTransition(ProjectStatus current, ProjectStatus target, UserPrincipal user, Project project) {
+    private void validateStatusTransition(ProjectStatus current, ProjectStatus target, UserPrincipal user,
+            Project project) {
         boolean isAdmin = user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         boolean isFaculty = user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY"));
         boolean isCreator = project.getCreatedBy().getId().equals(user.getId());
@@ -404,7 +432,8 @@ public class ProjectServiceImpl implements ProjectService {
             boolean hasFiles = !projectFileRepository.findByProjectId(project.getId()).isEmpty();
             boolean hasRepoUrl = project.getRepositoryUrl() != null && !project.getRepositoryUrl().trim().isEmpty();
             if (!hasFiles && !hasRepoUrl) {
-                throw new BadRequestException("Cannot submit draft for review: At least one project document attachment or repository URL is mandatory before submission.");
+                throw new BadRequestException(
+                        "Cannot submit draft for review: At least one project document attachment or repository URL is mandatory before submission.");
             }
             if (project.getTitle() == null || project.getTitle().trim().isEmpty()) {
                 throw new BadRequestException("Cannot submit draft for review: Project Title is required.");
@@ -416,15 +445,20 @@ public class ProjectServiceImpl implements ProjectService {
             if (!isFaculty && !isAdmin) {
                 throw new ForbiddenException("Only Faculty or Admin can move a project under review.");
             }
-            if (isFaculty && !isAdmin && project.getGuideFaculty() != null && !project.getGuideFaculty().getId().equals(user.getId())) {
-                throw new ForbiddenException("Only the designated Faculty Guide or Admin can evaluate this project submission.");
+            if (isFaculty && !isAdmin && project.getGuideFaculty() != null
+                    && !project.getGuideFaculty().getId().equals(user.getId())) {
+                throw new ForbiddenException(
+                        "Only the designated Faculty Guide or Admin can evaluate this project submission.");
             }
-        } else if (current == ProjectStatus.UNDER_REVIEW && (target == ProjectStatus.APPROVED || target == ProjectStatus.REJECTED)) {
+        } else if (current == ProjectStatus.UNDER_REVIEW
+                && (target == ProjectStatus.APPROVED || target == ProjectStatus.REJECTED)) {
             if (!isFaculty && !isAdmin) {
                 throw new ForbiddenException("Only Faculty or Admin can approve or reject projects.");
             }
-            if (isFaculty && !isAdmin && project.getGuideFaculty() != null && !project.getGuideFaculty().getId().equals(user.getId())) {
-                throw new ForbiddenException("Only the designated Faculty Guide or Admin can evaluate this project submission.");
+            if (isFaculty && !isAdmin && project.getGuideFaculty() != null
+                    && !project.getGuideFaculty().getId().equals(user.getId())) {
+                throw new ForbiddenException(
+                        "Only the designated Faculty Guide or Admin can evaluate this project submission.");
             }
         } else if (current == ProjectStatus.REJECTED && target == ProjectStatus.DRAFT) {
             if (!isCreator && !isAdmin) {
@@ -435,7 +469,9 @@ public class ProjectServiceImpl implements ProjectService {
                 throw new ForbiddenException("Only Faculty or Admin can archive an approved project.");
             }
         } else {
-            throw new BadRequestException(String.format("Invalid lifecycle state transition from '%s' to '%s'. Direct jumps are forbidden.", current, target));
+            throw new BadRequestException(
+                    String.format("Invalid lifecycle state transition from '%s' to '%s'. Direct jumps are forbidden.",
+                            current, target));
         }
     }
 
@@ -465,7 +501,8 @@ public class ProjectServiceImpl implements ProjectService {
         projectMemberRepository.deleteByProjectId(id);
         projectRepository.delete(project);
 
-        auditLogService.logEvent(currentUser.getId(), "PROJECT_DELETED", "PROJECT", id, "Project entry #" + id + " was deleted", null);
+        auditLogService.logEvent(currentUser.getId(), "PROJECT_DELETED", "PROJECT", id,
+                "Project entry #" + id + " was deleted", null);
     }
 
     @Override
@@ -487,7 +524,8 @@ public class ProjectServiceImpl implements ProjectService {
 
         // Lock File Upload after Submission Rule: Uploads allowed ONLY in DRAFT status!
         if (project.getStatus() != ProjectStatus.DRAFT && !isAdmin) {
-            throw new BadRequestException("Documents can only be uploaded while the project is in DRAFT status. Uploads are locked after submission.");
+            throw new BadRequestException(
+                    "Documents can only be uploaded while the project is in DRAFT status. Uploads are locked after submission.");
         }
 
         try {
@@ -504,13 +542,14 @@ public class ProjectServiceImpl implements ProjectService {
                     file.getOriginalFilename(),
                     file.getContentType() != null ? file.getContentType() : "application/octet-stream",
                     filePath.toString(),
-                    file.getSize()
-            );
+                    file.getSize());
 
             ProjectFile savedFile = projectFileRepository.save(projectFile);
 
             auditLogService.logEvent(currentUser.getId(), "PROJECT_FILE_UPLOADED", "PROJECT_FILE", savedFile.getId(),
-                    "Uploaded file '" + savedFile.getFileName() + "' (" + (savedFile.getFileSize() / 1024) + " KB) for project #" + projectId, null);
+                    "Uploaded file '" + savedFile.getFileName() + "' (" + (savedFile.getFileSize() / 1024)
+                            + " KB) for project #" + projectId,
+                    null);
 
             return projectMapper.toProjectFileDto(savedFile);
 
@@ -593,11 +632,14 @@ public class ProjectServiceImpl implements ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
 
         boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        boolean isFaculty = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY"));
-        boolean isCreator = project.getCreatedBy() != null && project.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isFaculty = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY"));
+        boolean isCreator = project.getCreatedBy() != null
+                && project.getCreatedBy().getId().equals(currentUser.getId());
 
         if (!isAdmin && !isFaculty && !isCreator) {
-            throw new ForbiddenException("Access denied: You do not have permission to run plagiarism evaluation on this project.");
+            throw new ForbiddenException(
+                    "Access denied: You do not have permission to run plagiarism evaluation on this project.");
         }
 
         aiPlagiarismService.evaluateProjectPlagiarism(project);

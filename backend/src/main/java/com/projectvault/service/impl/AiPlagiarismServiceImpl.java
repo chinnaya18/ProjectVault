@@ -40,8 +40,8 @@ public class AiPlagiarismServiceImpl implements AiPlagiarismService {
     private String aiServiceUrl;
 
     public AiPlagiarismServiceImpl(ProjectRepository projectRepository,
-                                  ProjectFileRepository projectFileRepository,
-                                  ObjectMapper objectMapper) {
+            ProjectFileRepository projectFileRepository,
+            ObjectMapper objectMapper) {
         this.projectRepository = projectRepository;
         this.projectFileRepository = projectFileRepository;
         this.objectMapper = objectMapper;
@@ -51,13 +51,14 @@ public class AiPlagiarismServiceImpl implements AiPlagiarismService {
     }
 
     @Override
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    @Transactional
     public void evaluateProjectPlagiarism(Project project) {
         if (project == null || project.getId() == null) {
             return;
         }
 
-        logger.info("Evaluating AI Plagiarism and Duplication for project #{} ('{}')", project.getId(), project.getTitle());
+        logger.info("Evaluating AI Plagiarism and Duplication for project #{} ('{}')", project.getId(),
+                project.getTitle());
 
         project.setPlagiarismStatus("SCANNING");
         projectRepository.save(project);
@@ -96,13 +97,15 @@ public class AiPlagiarismServiceImpl implements AiPlagiarismService {
                 project.setPlagiarismReport(reportJson);
                 project.setPlagiarismStatus("COMPLETED");
                 projectRepository.save(project);
-                logger.info("Plagiarism check completed for project #{}: Plag={}, Dup={}", project.getId(), plagScore, dupScore);
+                logger.info("Plagiarism check completed for project #{}: Plag={}, Dup={}", project.getId(), plagScore,
+                        dupScore);
                 return;
             } else {
                 logger.warn("AI Service returned status code {}: {}", response.statusCode(), response.body());
             }
         } catch (Exception e) {
-            logger.warn("Failed to contact AI service for plagiarism check: {}. Applying heuristic fallback.", e.getMessage());
+            logger.warn("Failed to contact AI service for plagiarism check: {}. Applying heuristic fallback.",
+                    e.getMessage());
         }
 
         // Fallback if AI microservice is unreachable
@@ -121,14 +124,16 @@ public class AiPlagiarismServiceImpl implements AiPlagiarismService {
             report.put("duplication_score", dupScore);
             report.put("duplication_verdict", "UNIQUE");
             report.put("valid_citations_detected", List.of(Map.of(
-                    "citation_text", hasRepo ? "Repository reference provided: " + project.getRepositoryUrl() : "Project original submission",
+                    "citation_text",
+                    hasRepo ? "Repository reference provided: " + project.getRepositoryUrl()
+                            : "Project original submission",
                     "source_type", "REFERENCE_CITATION",
-                    "status", "EXCLUDED_FROM_PLAGIARISM"
-            )));
+                    "status", "EXCLUDED_FROM_PLAGIARISM")));
             report.put("uncited_matches", List.of());
             report.put("matched_archived_projects", List.of());
             report.put("summary_explanation", "Automated scan verified project submission originality and citations.");
-            report.put("recommendation_for_faculty", "Draft verified with low similarity score. Ready for faculty review.");
+            report.put("recommendation_for_faculty",
+                    "Draft verified with low similarity score. Ready for faculty review.");
 
             project.setPlagiarismScore(plagScore);
             project.setDuplicationScore(dupScore);
@@ -190,14 +195,16 @@ public class AiPlagiarismServiceImpl implements AiPlagiarismService {
 
                 HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
-                    logger.info("Successfully generated and synced AI vector embedding for project #{}: {}", projectId, response.body());
+                    logger.info("Successfully generated and synced AI vector embedding for project #{}: {}", projectId,
+                            response.body());
                 } else {
-                    logger.warn("AI Service returned code {} while generating embedding for project #{}: {}", response.statusCode(), projectId, response.body());
+                    logger.warn("AI Service returned code {} while generating embedding for project #{}: {}",
+                            response.statusCode(), projectId, response.body());
                 }
             } catch (Exception e) {
-                logger.warn("Failed to contact AI microservice to sync embedding for project #{}: {}", projectId, e.getMessage());
+                logger.warn("Failed to contact AI microservice to sync embedding for project #{}: {}", projectId,
+                        e.getMessage());
             }
         });
     }
 }
-
