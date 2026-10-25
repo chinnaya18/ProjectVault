@@ -11,6 +11,8 @@ import com.projectvault.exception.BadRequestException;
 import com.projectvault.exception.ResourceNotFoundException;
 import com.projectvault.repository.DepartmentRepository;
 import com.projectvault.repository.StudentRosterRepository;
+import com.projectvault.repository.UserRepository;
+import com.projectvault.entity.UserStatus;
 import com.projectvault.service.AuditLogService;
 import com.projectvault.service.StudentRosterService;
 import org.springframework.data.domain.Page;
@@ -27,14 +29,17 @@ public class StudentRosterServiceImpl implements StudentRosterService {
 
     private final StudentRosterRepository studentRosterRepository;
     private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
     private final AuditLogService auditLogService;
 
     public StudentRosterServiceImpl(
             StudentRosterRepository studentRosterRepository,
             DepartmentRepository departmentRepository,
+            UserRepository userRepository,
             AuditLogService auditLogService) {
         this.studentRosterRepository = studentRosterRepository;
         this.departmentRepository = departmentRepository;
+        this.userRepository = userRepository;
         this.auditLogService = auditLogService;
     }
 
@@ -111,6 +116,17 @@ public class StudentRosterServiceImpl implements StudentRosterService {
                 existing.setDepartment(dept);
                 existing.setEligible(isEligible);
                 studentRosterRepository.save(existing);
+
+                // If student has already registered an active profile, keep profile synchronized
+                if (existing.isRegistered()) {
+                    final Department fDept = dept;
+                    userRepository.findByRollNoIgnoreCase(rollNo).ifPresent(user -> {
+                        user.setName(name);
+                        user.setDepartment(fDept);
+                        userRepository.save(user);
+                    });
+                }
+
                 updatedCount++;
             } else {
                 StudentRoster newRoster = new StudentRoster(
@@ -178,12 +194,21 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         roster.setEligible(newStatus);
         StudentRoster saved = studentRosterRepository.save(roster);
 
+        // Real-time bidirectional sync: update active user account state
+        userRepository.findByRollNoIgnoreCase(saved.getRollNo()).ifPresent(user -> {
+            user.setActive(newStatus);
+            user.setUserStatus(newStatus ? UserStatus.ACTIVE : UserStatus.INACTIVE);
+            userRepository.save(user);
+            logger.info("Synchronized active user status for roll number {}: active={}, status={}",
+                    user.getRollNo(), newStatus, user.getUserStatus());
+        });
+
         auditLogService.logEvent(
                 currentUserId,
                 "ROSTER_STATUS_CHANGE",
                 "ROSTER",
                 saved.getId(),
-                String.format("Toggled student roster eligibility for %s (%s) to %s",
+                String.format("Toggled student roster eligibility for %s (%s) to %s (synchronized with active user account)",
                         saved.getRollNo(), saved.getName(), newStatus ? "ELIGIBLE" : "DISCONTINUED"),
                 null
         );
