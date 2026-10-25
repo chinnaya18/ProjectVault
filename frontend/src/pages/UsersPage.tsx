@@ -106,7 +106,7 @@ export const UsersPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await api.get<ApiResponse<PageResponse<User>>>('/users?size=150');
+      const res = await api.get<ApiResponse<PageResponse<User>>>('/users?size=500');
       if (res.data && res.data.data && res.data.data.content) {
         setUsers(res.data.data.content);
       }
@@ -518,7 +518,8 @@ export const UsersPage: React.FC = () => {
                 className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Account Statuses</option>
-                <option value="ACTIVE">ACTIVE</option>
+                <option value="ACTIVE">ACTIVE (OTP Verified)</option>
+                <option value="PENDING">PENDING ACTIVATION</option>
                 <option value="INACTIVE">INACTIVE</option>
                 <option value="ALUMNI">ALUMNI</option>
               </select>
@@ -586,12 +587,14 @@ export const UsersPage: React.FC = () => {
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                               u.userStatus === 'ACTIVE'
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : u.userStatus === 'PENDING'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                 : u.userStatus === 'ALUMNI'
                                 ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
                             }`}
                           >
-                            {u.userStatus}
+                            {u.userStatus === 'PENDING' ? 'PENDING ACTIVATION' : u.userStatus}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right space-x-2">
@@ -608,7 +611,7 @@ export const UsersPage: React.FC = () => {
                             <button
                               onClick={() => handleUpdateStatus(u.id, 'ACTIVE')}
                               className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors"
-                              title="Activate Account Access"
+                              title={u.userStatus === 'PENDING' ? 'Manually Activate Student Profile' : 'Activate Account Access'}
                             >
                               Activate
                             </button>

@@ -75,7 +75,7 @@ public class User {
         this.name = name;
         this.rollNo = rollNo;
         this.role = role != null ? role : Role.STUDENT;
-        this.userStatus = UserStatus.ACTIVE;
+        this.userStatus = Role.STUDENT.equals(this.role) ? UserStatus.PENDING : UserStatus.ACTIVE;
         this.department = department;
         this.isActive = true;
         this.createdAt = LocalDateTime.now();

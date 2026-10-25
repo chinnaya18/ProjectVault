@@ -1,5 +1,5 @@
 export type Role = 'ADMIN' | 'FACULTY' | 'STUDENT';
-export type UserStatus = 'ACTIVE' | 'ALUMNI' | 'INACTIVE';
+export type UserStatus = 'ACTIVE' | 'PENDING' | 'ALUMNI' | 'INACTIVE';
 export type ProjectStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
 export type ProjectVisibility = 'PUBLIC' | 'DEPARTMENT_ONLY' | 'PRIVATE';
 
