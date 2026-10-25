@@ -78,6 +78,7 @@ public class StudentRosterController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "batch", defaultValue = "2025-2027") String batch,
             @RequestParam(value = "departmentId", defaultValue = "1") Long departmentId,
+            @RequestParam(value = "syncMode", defaultValue = "false") Boolean syncMode,
             @AuthenticationPrincipal UserPrincipal currentUser) throws Exception {
 
         List<StudentRosterItemRequest> items = new ArrayList<>();
@@ -119,10 +120,23 @@ public class StudentRosterController {
             }
         }
 
-        StudentRosterBulkRequest bulkReq = new StudentRosterBulkRequest(items, batch, departmentId);
+        StudentRosterBulkRequest bulkReq = new StudentRosterBulkRequest(items, batch, departmentId, syncMode);
         Long adminId = currentUser != null ? currentUser.getId() : 1L;
         Map<String, Object> result = studentRosterService.importBulkRoster(bulkReq, adminId);
         return ResponseEntity.ok(ApiResponse.success("CSV roster imported successfully", result));
+    }
+
+    @DeleteMapping("/batch")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Purge Unregistered Students in Batch", description = "Removes all unregistered nominal roll entries in a specified batch.")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> purgeBatch(
+            @RequestParam String batch,
+            @RequestParam(required = false) Long departmentId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        Long adminId = currentUser != null ? currentUser.getId() : 1L;
+        Map<String, Object> result = studentRosterService.purgeBatch(batch, departmentId, adminId);
+        return ResponseEntity.ok(ApiResponse.success("Batch nominal roll purged successfully", result));
     }
 
     @PutMapping("/{id}/toggle-eligibility")

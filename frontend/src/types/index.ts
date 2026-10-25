@@ -322,6 +322,7 @@ export interface StudentRosterBulkPayload {
   students: StudentRosterItemPayload[];
   defaultBatch?: string;
   defaultDepartmentId?: number;
+  syncMode?: boolean;
 }
 
 

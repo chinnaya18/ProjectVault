@@ -245,6 +245,29 @@ export const UsersPage: React.FC = () => {
     XLSX.writeFile(wb, 'psgtech_student_roster_template.xlsx');
   };
 
+  const handlePurgeBatchPrompt = async () => {
+    const defaultVal = rosterBatch.trim() || '26MX';
+    const targetBatch = window.prompt(
+      `Enter batch code to purge (e.g. ${defaultVal}).\n\nAll UNREGISTERED nominal roll entries in this batch will be permanently removed. Active accounts will be safely preserved:`,
+      defaultVal
+    );
+    if (!targetBatch || !targetBatch.trim()) return;
+
+    if (!window.confirm(`Are you SURE you want to delete all unregistered students in batch '${targetBatch.trim()}'? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await api.delete(`/roster/batch?batch=${encodeURIComponent(targetBatch.trim())}`);
+      const data = res.data?.data;
+      setRosterSuccess(data?.message || `Successfully purged batch ${targetBatch.trim()}`);
+      fetchRoster(0);
+      fetchRosterStats();
+    } catch (err: any) {
+      setRosterError(getErrorMessage(err, `Failed to purge batch ${targetBatch}`));
+    }
+  };
+
   // Filtered users for User Directory tab
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -308,6 +331,14 @@ export const UsersPage: React.FC = () => {
               >
                 <Upload className="w-4 h-4" />
                 <span>Ingest Excel Roster</span>
+              </button>
+              <button
+                onClick={handlePurgeBatchPrompt}
+                className="px-3.5 py-2.5 bg-white hover:bg-rose-50 text-rose-700 hover:text-rose-800 text-sm font-semibold rounded-xl border border-rose-200 hover:border-rose-300 shadow-sm flex items-center space-x-2 transition-all"
+                title="Wipe unverified student entries for a batch"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>Purge Batch</span>
               </button>
             </>
           ) : (

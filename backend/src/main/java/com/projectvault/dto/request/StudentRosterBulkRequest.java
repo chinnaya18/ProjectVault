@@ -10,6 +10,7 @@ public class StudentRosterBulkRequest {
 
     private String defaultBatch;
     private Long defaultDepartmentId;
+    private Boolean syncMode = false;
 
     public StudentRosterBulkRequest() {}
 
@@ -17,6 +18,14 @@ public class StudentRosterBulkRequest {
         this.students = students;
         this.defaultBatch = defaultBatch;
         this.defaultDepartmentId = defaultDepartmentId;
+        this.syncMode = false;
+    }
+
+    public StudentRosterBulkRequest(List<StudentRosterItemRequest> students, String defaultBatch, Long defaultDepartmentId, Boolean syncMode) {
+        this.students = students;
+        this.defaultBatch = defaultBatch;
+        this.defaultDepartmentId = defaultDepartmentId;
+        this.syncMode = syncMode != null ? syncMode : false;
     }
 
     public List<StudentRosterItemRequest> getStudents() {
@@ -41,5 +50,13 @@ public class StudentRosterBulkRequest {
 
     public void setDefaultDepartmentId(Long defaultDepartmentId) {
         this.defaultDepartmentId = defaultDepartmentId;
+    }
+
+    public Boolean getSyncMode() {
+        return syncMode;
+    }
+
+    public void setSyncMode(Boolean syncMode) {
+        this.syncMode = syncMode != null ? syncMode : false;
     }
 }

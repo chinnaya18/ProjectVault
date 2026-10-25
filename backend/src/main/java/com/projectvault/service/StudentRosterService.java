@@ -13,5 +13,6 @@ public interface StudentRosterService {
     Map<String, Object> importBulkRoster(StudentRosterBulkRequest request, Long currentUserId);
     StudentRosterDto toggleEligibility(Long id, Long currentUserId);
     void deleteRosterItem(Long id, Long currentUserId);
+    Map<String, Object> purgeBatch(String batch, Long departmentId, Long currentUserId);
     StudentRosterStatsDto getStats();
 }

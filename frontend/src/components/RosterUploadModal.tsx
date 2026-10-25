@@ -41,6 +41,7 @@ export const RosterUploadModal: React.FC<RosterUploadModalProps> = ({
   const [isParsing, setIsParsing] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [syncMode, setSyncMode] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
@@ -197,18 +198,23 @@ export const RosterUploadModal: React.FC<RosterUploadModalProps> = ({
         departmentId: selectedDeptId
       })),
       defaultBatch: batch,
-      defaultDepartmentId: selectedDeptId
+      defaultDepartmentId: selectedDeptId,
+      syncMode
     };
 
     try {
       const res = await api.post('/roster/bulk', payload);
       const resData = res.data?.data;
       const count = resData?.totalProcessed || parsedStudents.length;
-      setSubmitSuccess(`Success! Ingested ${count} students into nominal roll whitelist.`);
+      const deleted = resData?.deleted || 0;
+      const msg = deleted > 0
+        ? `Success! Ingested ${count} students and automatically purged ${deleted} unlisted entries from batch ${batch}.`
+        : `Success! Ingested ${count} students into nominal roll whitelist.`;
+      setSubmitSuccess(msg);
       onSuccess(count);
       setTimeout(() => {
         onClose();
-      }, 1400);
+      }, 1500);
     } catch (err: any) {
       setSubmitError(getErrorMessage(err, 'Failed to ingest student roster'));
     } finally {
@@ -334,6 +340,25 @@ export const RosterUploadModal: React.FC<RosterUploadModalProps> = ({
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Sync & Purge Unlisted Option */}
+          <div className="bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-xl p-3.5 flex items-start space-x-3 transition-colors">
+            <input
+              type="checkbox"
+              id="syncModeToggle"
+              checked={syncMode}
+              onChange={(e) => setSyncMode(e.target.checked)}
+              className="mt-0.5 w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+            />
+            <label htmlFor="syncModeToggle" className="text-xs text-slate-700 cursor-pointer select-none">
+              <span className="font-bold text-slate-900 block mb-0.5">
+                Full Sync Mode: Automatically remove unlisted students in batch "{batch || 'all'}"
+              </span>
+              <span>
+                If checked, any students in this batch who are <span className="font-semibold text-rose-600">NOT in this uploaded file</span> will be automatically purged from the roster. Active accounts with registered logins are safely preserved.
+              </span>
+            </label>
           </div>
 
           {/* Feedback & Parsing State */}

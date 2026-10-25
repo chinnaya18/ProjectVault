@@ -23,6 +23,8 @@ import java.util.*;
 @Service
 public class StudentRosterServiceImpl implements StudentRosterService {
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StudentRosterServiceImpl.class);
+
     private final StudentRosterRepository studentRosterRepository;
     private final DepartmentRepository departmentRepository;
     private final AuditLogService auditLogService;
@@ -61,6 +63,9 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         Department defaultDepartment = departmentRepository.findById(defaultDeptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", defaultDeptId));
 
+        boolean syncMode = Boolean.TRUE.equals(request.getSyncMode());
+        Set<String> uploadedRolls = new HashSet<>();
+
         int createdCount = 0;
         int updatedCount = 0;
         List<String> errors = new ArrayList<>();
@@ -77,6 +82,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
             }
 
             String rollNo = item.getRollNo().trim().toUpperCase();
+            uploadedRolls.add(rollNo);
             String name = item.getName().trim();
 
             String email = item.getEmail();
@@ -120,22 +126,44 @@ public class StudentRosterServiceImpl implements StudentRosterService {
             }
         }
 
+        int deletedCount = 0;
+        int preservedActiveCount = 0;
+        if (syncMode && defaultBatch != null && !defaultBatch.isBlank()) {
+            List<StudentRoster> batchStudents = studentRosterRepository.findByBatchIgnoreCaseAndDepartmentId(defaultBatch.trim(), defaultDeptId);
+
+            for (StudentRoster existing : batchStudents) {
+                if (!uploadedRolls.contains(existing.getRollNo().toUpperCase())) {
+                    if (existing.isRegistered()) {
+                        preservedActiveCount++;
+                        logger.warn("Sync mode safely preserved active registered student: {}", existing.getRollNo());
+                    } else {
+                        studentRosterRepository.delete(existing);
+                        deletedCount++;
+                    }
+                }
+            }
+        }
+
         auditLogService.logEvent(
                 currentUserId,
-                "ROSTER_INGEST",
+                syncMode ? "ROSTER_SYNC_INGEST" : "ROSTER_INGEST",
                 "ROSTER",
                 null,
-                String.format("Bulk ingested student roster: %d created, %d updated, %d errors", createdCount, updatedCount, errors.size()),
+                String.format("Bulk roster processed: %d created, %d updated, %d deleted (syncMode=%b), %d errors",
+                        createdCount, updatedCount, deletedCount, syncMode, errors.size()),
                 null
         );
 
         Map<String, Object> response = new HashMap<>();
         response.put("created", createdCount);
         response.put("updated", updatedCount);
+        response.put("deleted", deletedCount);
+        response.put("preservedActive", preservedActiveCount);
         response.put("totalProcessed", createdCount + updatedCount);
         response.put("errors", errors);
-        response.put("message", String.format("Successfully ingested %d students (%d created, %d updated).",
-                createdCount + updatedCount, createdCount, updatedCount));
+        response.put("message", String.format("Successfully processed: %d created, %d updated%s.",
+                createdCount, updatedCount,
+                syncMode ? String.format(", %d deleted (purged missing rows)", deletedCount) : ""));
 
         return response;
     }
@@ -183,6 +211,49 @@ public class StudentRosterServiceImpl implements StudentRosterService {
                 String.format("Removed roll number %s (%s) from nominal roll whitelist", roster.getRollNo(), roster.getName()),
                 null
         );
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> purgeBatch(String batch, Long departmentId, Long currentUserId) {
+        if (batch == null || batch.trim().isBlank()) {
+            throw new BadRequestException("Batch name is required to purge batch records.");
+        }
+        String cleanBatch = batch.trim();
+        List<StudentRoster> batchStudents;
+        if (departmentId != null) {
+            batchStudents = studentRosterRepository.findByBatchIgnoreCaseAndDepartmentId(cleanBatch, departmentId);
+        } else {
+            batchStudents = studentRosterRepository.findByBatchIgnoreCase(cleanBatch);
+        }
+
+        int deletedCount = 0;
+        int preservedCount = 0;
+        for (StudentRoster student : batchStudents) {
+            if (student.isRegistered()) {
+                preservedCount++;
+            } else {
+                studentRosterRepository.delete(student);
+                deletedCount++;
+            }
+        }
+
+        auditLogService.logEvent(
+                currentUserId,
+                "ROSTER_PURGE_BATCH",
+                "ROSTER",
+                null,
+                String.format("Purged nominal roll for batch '%s': %d deleted, %d active accounts preserved", cleanBatch, deletedCount, preservedCount),
+                null
+        );
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("batch", cleanBatch);
+        result.put("deleted", deletedCount);
+        result.put("preserved", preservedCount);
+        result.put("message", String.format("Batch '%s' purged: %d unverified records removed, %d active student accounts preserved.",
+                cleanBatch, deletedCount, preservedCount));
+        return result;
     }
 
     @Override
