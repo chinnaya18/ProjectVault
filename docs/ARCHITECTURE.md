@@ -152,7 +152,7 @@ ProjectVault is architected for deployment inside a college LAN/Wi-Fi network wh
 |   | NGINX / Web Server    | ---> | React App (Static)    |                      |
 |   +-----------┬-----------+      +-----------------------+                      |
 |               │                                                                 |
-|               ▼ REST HTTP (Port 8080)                                           |
+|               ▼ REST HTTP (Port 8081)                                           |
 |   +-----------------------+      +-----------------------+                      |
 |   | Spring Boot Service   | ---> | Local File Storage    |                      |
 |   +-----------┬-----------+      | (storage/projects/)   |                      |

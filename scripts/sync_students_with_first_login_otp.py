@@ -103,7 +103,7 @@ def sync_students():
     print(f"\nTesting live login for student: {sample_email} with password 'Password@123'")
     try:
         res = requests.post(
-            "http://localhost:8080/api/v1/auth/login",
+            "http://localhost:8081/api/v1/auth/login",
             json={"email": sample_email, "password": "Password@123"},
             timeout=5
         )

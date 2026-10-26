@@ -10,7 +10,7 @@ The **AI Intelligence Microservice** for **ProjectVault** (Academic Project Repo
 User / React Frontend
          │
          ▼
-Spring Boot Backend (Port 8080)
+Spring Boot Backend (Port 8081)
          │
          ▼
 FastAPI AI Service (Port 8000)

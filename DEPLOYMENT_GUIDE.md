@@ -8,7 +8,7 @@ This document provides instructions for deploying **ProjectVault** on an allotte
 
 ProjectVault is composed of 3 modular services orchestrated for LAN operation:
 1. **Frontend Web Client:** React 18 + Vite (Bound to `0.0.0.0:5173`, with automatic internal reverse-proxy to backend APIs).
-2. **Core Backend API:** Spring Boot 3.3.4 + Java 17 (Running on port `8080`).
+2. **Core Backend API:** Spring Boot 3.3.4 + Java 17 (Running on port `8081`).
 3. **AI Intelligence Microservice:** Python FastAPI + pgvector + AST Multimodal Duplication Engine (Running on port `8000`).
 4. **Relational & Vector Store:** PostgreSQL 15/16 + `pgvector` extension (Running on port `5432`).
 
@@ -83,7 +83,7 @@ Double-click or run:
 D:\ProjectVault\start-all.bat
 ```
 This automatically launches all 3 services in separate windows:
-- **Spring Boot Backend:** `http://localhost:8080`
+- **Spring Boot Backend:** `http://localhost:8081`
 - **FastAPI AI Service:** `http://localhost:8000`
 - **React Frontend:** `http://0.0.0.0:5173`
 
@@ -105,7 +105,7 @@ This automatically launches all 3 services in separate windows:
    *(Example: `http://10.18.25.102:5173`)*
 
 > [!NOTE]
-> Vite's built-in reverse proxy forwards all API and AI service calls internally on the host machine. You do **not** need to open ports 8080 or 8000 across the network firewall—only port **5173** needs to be accessible over LAN.
+> Vite's built-in reverse proxy forwards all API and AI service calls internally on the host machine. You do **not** need to open ports 8081 or 8000 across the network firewall—only port **5173** needs to be accessible over LAN.
 
 ---
 

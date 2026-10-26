@@ -21,7 +21,8 @@ ENV AI_SERVICE_URL=http://ai-service:8000
 ENV DB_HOST=postgres
 ENV DB_PORT=5432
 ENV DB_NAME=projectvault
+ENV PORT=8081
 
-EXPOSE 8080
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

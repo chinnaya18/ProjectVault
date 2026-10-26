@@ -39,10 +39,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
       STORAGE_LOCAL_DIR: /app/storage
       AI_SERVICE_URL: http://ai-service:8000
+      PORT: 8081
     volumes:
       - storage_data:/app/storage
     ports:
-      - "8080:8080"
+      - "8081:8081"
 
   ai-service:
     build:

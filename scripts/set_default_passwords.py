@@ -26,7 +26,7 @@ def update_passwords():
     
     conn.close()
 
-    # Now verify live login against Spring Boot on port 8080
+    # Now verify live login against Spring Boot on port 8081
     test_accounts = [
         ("Admin", "admin@psgtech.ac.in"),
         ("Faculty", "nir.mca@psgtech.ac.in"),
@@ -36,7 +36,7 @@ def update_passwords():
     print("\n--- Live Login Verification ---")
     for role_name, email in test_accounts:
         res = requests.post(
-            "http://localhost:8080/api/v1/auth/login",
+            "http://localhost:8081/api/v1/auth/login",
             json={"email": email, "password": "Password@123"},
             timeout=5
         )
