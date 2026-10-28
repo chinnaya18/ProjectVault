@@ -163,7 +163,7 @@ export interface CreateProjectRequest {
   repositoryUrl?: string;
   githubToken?: string;
   guideFacultyId?: number;
-  members?: { userId?: number; userEmail?: string; memberRole: string }[];
+  members?: { userId?: number; userEmail?: string; email?: string; rollNo?: string; memberRole: string }[];
 }
 
 export interface UpdateProjectRequest {

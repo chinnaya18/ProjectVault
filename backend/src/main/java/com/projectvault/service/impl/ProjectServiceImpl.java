@@ -230,6 +230,22 @@ public class ProjectServiceImpl implements ProjectService {
         Department department = departmentRepository.findById(request.getDepartmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
 
+        // Guard: Prevent double-submission if student is already creator or member of an active project in this semester/type
+        if (creator.getRole() == Role.STUDENT) {
+            List<Project> existingCreatorProjects = projectRepository.findActiveProjectsForUser(
+                    creator.getId(),
+                    request.getAcademicYear(),
+                    request.getSemester(),
+                    request.getProjectType());
+            if (!existingCreatorProjects.isEmpty()) {
+                Project prev = existingCreatorProjects.get(0);
+                throw new BadRequestException(String.format(
+                        "Submission conflict: You are already registered on an active %s (Semester %d, %s): Project #%d ('%s') [%s]. Each student can only be part of one project per semester.",
+                        request.getProjectType(), request.getSemester(), request.getAcademicYear(),
+                        prev.getId(), prev.getTitle(), prev.getStatus()));
+            }
+        }
+
         Project project = new Project(
                 request.getTitle(),
                 request.getAbstractText(),
@@ -262,11 +278,41 @@ public class ProjectServiceImpl implements ProjectService {
 
         if (request.getMembers() != null) {
             for (ProjectMemberRequest mr : request.getMembers()) {
-                if (!mr.getUserId().equals(creator.getId())) {
-                    User memberUser = userRepository.findById(mr.getUserId())
-                            .orElseThrow(() -> new ResourceNotFoundException("User", "id", mr.getUserId()));
-                    ProjectMember member = new ProjectMember(savedProject, memberUser, mr.getMemberRole());
-                    members.add(projectMemberRepository.save(member));
+                User memberUser = null;
+                if (mr.getUserId() != null) {
+                    memberUser = userRepository.findById(mr.getUserId()).orElse(null);
+                }
+                if (memberUser == null && mr.getEmail() != null && !mr.getEmail().isBlank()) {
+                    memberUser = userRepository.findByEmail(mr.getEmail().trim().toLowerCase()).orElse(null);
+                }
+                if (memberUser == null && mr.getRollNo() != null && !mr.getRollNo().isBlank()) {
+                    memberUser = userRepository.findByRollNoIgnoreCase(mr.getRollNo().trim()).orElse(null);
+                }
+
+                if (memberUser != null && !memberUser.getId().equals(creator.getId())) {
+                    // Check if teammate is already enrolled in another active project in this semester
+                    List<Project> existingMemberProjects = projectRepository.findActiveProjectsForUser(
+                            memberUser.getId(),
+                            request.getAcademicYear(),
+                            request.getSemester(),
+                            request.getProjectType());
+                    if (!existingMemberProjects.isEmpty()) {
+                        Project prev = existingMemberProjects.get(0);
+                        throw new BadRequestException(String.format(
+                                "Team member conflict: Student '%s' (%s) is already registered on an active %s (Semester %d, %s): Project #%d ('%s') [%s]. A student cannot be assigned to multiple teams in the same semester.",
+                                memberUser.getEmail(), memberUser.getName(),
+                                request.getProjectType(), request.getSemester(), request.getAcademicYear(),
+                                prev.getId(), prev.getTitle(), prev.getStatus()));
+                    }
+
+                    // Check if already added to this project's member list
+                    final Long mid = memberUser.getId();
+                    boolean alreadyInList = members.stream().anyMatch(m -> m.getUser().getId().equals(mid));
+                    if (!alreadyInList) {
+                        String role = mr.getMemberRole() != null && !mr.getMemberRole().isBlank() ? mr.getMemberRole() : "Team Member";
+                        ProjectMember member = new ProjectMember(savedProject, memberUser, role);
+                        members.add(projectMemberRepository.save(member));
+                    }
                 }
             }
         }

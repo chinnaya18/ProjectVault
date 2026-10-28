@@ -55,4 +55,16 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
 
     @Query("SELECT p.status, COUNT(p) FROM Project p GROUP BY p.status")
     java.util.List<Object[]> countProjectsByStatus();
+
+    @Query("SELECT DISTINCT p FROM Project p WHERE " +
+           "(p.createdBy.id = :userId OR EXISTS (SELECT m FROM ProjectMember m WHERE m.project = p AND m.user.id = :userId)) " +
+           "AND p.academicYear = :academicYear " +
+           "AND p.semester = :semester " +
+           "AND p.projectType = :projectType " +
+           "AND p.status IN (com.projectvault.entity.ProjectStatus.DRAFT, com.projectvault.entity.ProjectStatus.SUBMITTED, com.projectvault.entity.ProjectStatus.UNDER_REVIEW, com.projectvault.entity.ProjectStatus.APPROVED)")
+    java.util.List<Project> findActiveProjectsForUser(
+            @Param("userId") Long userId,
+            @Param("academicYear") String academicYear,
+            @Param("semester") Integer semester,
+            @Param("projectType") String projectType);
 }

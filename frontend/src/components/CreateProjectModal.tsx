@@ -191,9 +191,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
     const payload = {
       ...formData,
-      visibility: 'PUBLIC',
-      members: teamMembers.slice(0, teamCount).map((_, idx) => ({
-        userId: user?.id || 1,
+      visibility: 'PUBLIC' as const,
+      members: teamMembers.slice(0, teamCount).map((m, idx) => ({
+        userId: idx === 0 ? (user?.id || 1) : undefined,
+        email: m.email?.trim() || undefined,
         memberRole: idx === 0 ? 'Project Lead / Author' : `Team Member #${idx + 1}`
       }))
     };
