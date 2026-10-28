@@ -113,7 +113,7 @@ This automatically launches all 3 services in separate windows:
 
 | Role | Email | Initial Password | Description |
 | :--- | :--- | :--- | :--- |
-| **Department Admin / HOD** | `admin@psgtech.ac.in` | `Password@123` | Full access, nominal roll ingestion, user governance, audit trail |
+| **Department Admin / HOD** | `admin@psgtech.ac.in` | `Adminpsg2025@` | Full access, nominal roll ingestion, user governance, audit trail |
 | **HOD (i/c) Faculty Guide** | `nir.mca@psgtech.ac.in` | `Password@123` | Dr. Ilayaraja N (Designated Guide reviews & approvals) |
 | **Faculty Guide** | `vrm.mca@psgtech.ac.in` | `Password@123` | Dr. Manavalan R (Associate Professor) |
 | **Faculty Guide** | `sng.mca@psgtech.ac.in` | `Password@123` | Dr. Geetha N (Assistant Professor Sl. Gr.) |

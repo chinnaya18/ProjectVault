@@ -1363,7 +1363,7 @@ COPY public.users (id, email, password_hash, role, user_status, department_id, i
 49	nrj.mca@psgtech.ac.in	$2a$10$htdtCpRhaMgUkO7LKcP/cOsuvmEWwRbZFkUz2csu/16.GvvGjgMzq	FACULTY	ACTIVE	1	t	2026-09-29 21:03:49.73885+05:30	2026-09-29 21:03:49.73885+05:30	Mrs. Rajeswari N	Assistant Professor (Sr. Gr.)	t	\N	\N	0	\N
 50	asa.mca@psgtech.ac.in	$2a$10$htdtCpRhaMgUkO7LKcP/cOsuvmEWwRbZFkUz2csu/16.GvvGjgMzq	FACULTY	ACTIVE	1	t	2026-09-29 21:03:49.73885+05:30	2026-09-29 21:03:49.73885+05:30	Mrs. Aarthi Mai A S	Assistant Professor	t	\N	\N	0	\N
 51	abh.mca@psgtech.ac.in	$2a$10$htdtCpRhaMgUkO7LKcP/cOsuvmEWwRbZFkUz2csu/16.GvvGjgMzq	FACULTY	ACTIVE	1	t	2026-09-29 21:03:49.73885+05:30	2026-09-29 21:03:49.73885+05:30	Dr. Bhuvaneswari A	Assistant Professor	t	\N	\N	0	\N
-19	admin@psgtech.ac.in	$2a$10$htdtCpRhaMgUkO7LKcP/cOsuvmEWwRbZFkUz2csu/16.GvvGjgMzq	ADMIN	ACTIVE	1	t	2026-08-17 15:06:48.085572+05:30	2026-08-24 13:57:49.688694+05:30	Department Admin	HOD-MCA	f	\N	\N	0	\N
+19	admin@psgtech.ac.in	$2a$10$yj9QYa6wDSQ4NEWn22aGGeGcTZoqm6DUeGGlSXxrIk636CQ3acqSi	ADMIN	ACTIVE	1	t	2026-08-17 15:06:48.085572+05:30	2026-08-24 13:57:49.688694+05:30	Department Admin	HOD-MCA	f	\N	\N	0	\N
 77	24mx104@psgtech.ac.in	$2a$10$htdtCpRhaMgUkO7LKcP/cOsuvmEWwRbZFkUz2csu/16.GvvGjgMzq	STUDENT	ALUMNI	1	t	2026-10-12 15:16:58.824152+05:30	2026-10-12 15:16:58.824152+05:30	24MX104	24MX104	t	\N	\N	0	\N
 78	24mx127@psgtech.ac.in	$2a$10$htdtCpRhaMgUkO7LKcP/cOsuvmEWwRbZFkUz2csu/16.GvvGjgMzq	STUDENT	ALUMNI	1	t	2026-10-12 15:17:00.172432+05:30	2026-10-12 15:17:00.172432+05:30	24MX127	24MX127	t	\N	\N	0	\N
 53	24mx217@psgtech.ac.in	$2a$10$htdtCpRhaMgUkO7LKcP/cOsuvmEWwRbZFkUz2csu/16.GvvGjgMzq	STUDENT	ALUMNI	1	t	2026-10-12 15:11:36.559013+05:30	2026-10-12 15:11:36.559013+05:30	24MX217	24MX217	t	\N	\N	0	\N
