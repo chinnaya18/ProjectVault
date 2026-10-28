@@ -213,10 +213,24 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectI
     }
   };
 
-  const handleFileDownload = (file: ProjectFile) => {
+  const handleFileDownload = async (file: ProjectFile) => {
     const targetId = activeProjectId ?? projectId;
     if (!targetId) return;
-    window.open(`${api.defaults.baseURL}/projects/${targetId}/files/${file.id}/download`, '_blank');
+    try {
+      const response = await api.get(`/projects/${targetId}/files/${file.id}/download`, {
+        responseType: 'blob',
+      });
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', file.fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err: any) {
+      setError(getErrorMessage(err, 'Failed to download file'));
+    }
   };
 
   const handleFileDelete = async (fileId: number) => {
